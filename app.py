@@ -1,11 +1,9 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-# ------------------------------------------------------------
-# SafeICU | Research dashboard for synthetic RL experiments
-# ------------------------------------------------------------
 st.set_page_config(
     page_title="SafeICU | Safety-Aware RL Lab",
     page_icon="🏥",
@@ -15,43 +13,25 @@ st.set_page_config(
 
 DATA_DIR = Path(__file__).parent
 
-# A restrained dark research-console theme; charts use Streamlit theme defaults.
-st.markdown(
-    """
-    <style>
-      .stApp { background: #0b1020; }
-      [data-testid="stSidebar"] { background: #11182a; }
-      .block-container { padding-top: 1.6rem; padding-bottom: 3rem; max-width: 1500px; }
-      .hero {
-        padding: 1.4rem 1.6rem; border-radius: 18px;
-        background: linear-gradient(115deg, #14243b 0%, #123b43 100%);
-        border: 1px solid rgba(111, 231, 213, .25);
-        margin-bottom: 1.1rem;
-      }
-      .eyebrow { color: #6fe7d5; text-transform: uppercase; letter-spacing: .13em;
-        font-size: .74rem; font-weight: 700; }
-      .hero h1 { margin: .3rem 0 .35rem 0; font-size: 2.35rem; color: #f4f8ff; }
-      .hero p { margin: 0; color: #c5d4e7; font-size: 1rem; }
-      .small-note { color: #9eacc2; font-size: .84rem; }
-      div[data-testid="stMetric"] {
-        background: #121b2d; border: 1px solid #25354b; padding: 1rem;
-        border-radius: 14px;
-      }
-      div[data-testid="stMetricLabel"] { color: #aabbd0; }
-      div[data-testid="stMetricValue"] { color: #f4f8ff; }
-      .status-pill {
-        display: inline-block; border: 1px solid #326b67; color: #8af0d8;
-        background: #102f34; padding: .28rem .65rem; border-radius: 999px;
-        font-size: .78rem; font-weight: 650;
-      }
-      .section-intro { color: #aabbd0; margin-top: -.5rem; }
-      .stTabs [data-baseweb="tab-list"] { gap: .4rem; }
-      .stTabs [data-baseweb="tab"] { background: #121b2d; border-radius: 8px 8px 0 0; padding: .7rem 1rem; }
-      hr { border-color: #26344a; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+st.markdown("""
+<style>
+.stApp { background: #0a1020; }
+[data-testid="stSidebar"] { background: #111a2d; }
+.block-container { max-width: 1500px; padding-top: 1.5rem; padding-bottom: 3rem; }
+.hero { padding: 1.5rem 1.7rem; border-radius: 18px;
+  background: linear-gradient(115deg,#14243b,#124149);
+  border: 1px solid #285d66; margin-bottom: 1rem; }
+.eyebrow { color: #79e5d4; font-size: .75rem; letter-spacing: .14em;
+  font-weight: 800; text-transform: uppercase; }
+.hero h1 { color: #f5f8ff; margin: .3rem 0; font-size: 2.5rem; }
+.hero p { color: #c4d4e8; margin: 0; }
+div[data-testid="stMetric"] { background:#121d31; border:1px solid #263750;
+  border-radius:14px; padding: .9rem 1rem; }
+div[data-testid="stMetricLabel"] { color:#aabbd0; }
+div[data-testid="stMetricValue"] { color:#f5f8ff; }
+.note { color:#9cacc2; font-size:.86rem; }
+</style>
+""", unsafe_allow_html=True)
 
 def load_csv(filename):
     path = DATA_DIR / filename
@@ -59,109 +39,72 @@ def load_csv(filename):
         return None
     try:
         return pd.read_csv(path)
-    except Exception as exc:
-        st.warning(f"Could not read `{filename}`: {exc}")
+    except Exception:
         return None
 
-# Load both original and improved evaluation files if available.
 initial = load_csv("safeicu_final_evaluation.csv")
 if initial is None:
     initial = load_csv("safeicu_initial_comparison.csv")
-
 final_summary = load_csv("safeicu_final_summary.csv")
 followup = load_csv("safeicu_agentic_followup.csv")
 agent_report = load_csv("safeicu_agentic_report.csv")
 dqn_tests = load_csv("safeicu_dqn_safety_tests.csv")
 ppo_tests = load_csv("safeicu_ppo_safety_tests.csv")
 
-if initial is None or initial.empty:
-    st.error(
-        "Evaluation data was not found. Upload `safeicu_initial_comparison.csv` "
-        "or `safeicu_final_evaluation.csv` beside `app.py` in the GitHub repository."
-    )
-    st.stop()
-
-# Normalize scenario/policy labels without fabricating values.
-if "Scenario" not in initial.columns or "Policy" not in initial.columns:
-    st.error("The evaluation CSV must contain `Scenario` and `Policy` columns.")
-    st.stop()
-
-# Sidebar
 st.sidebar.markdown("## 🎛️ Experiment controls")
-st.sidebar.caption("Filter stored synthetic evaluation results.")
-scenarios = ["All"] + sorted(initial["Scenario"].dropna().astype(str).unique().tolist())
-scenario = st.sidebar.selectbox("Demand scenario", scenarios, index=0)
-policies = ["All"] + sorted(initial["Policy"].dropna().astype(str).unique().tolist())
-selected_policy = st.sidebar.selectbox("Policy", policies, index=0)
+st.sidebar.caption("Filter stored evaluation results.")
+if initial is not None and not initial.empty and {"Scenario", "Policy"}.issubset(initial.columns):
+    scenarios = ["All"] + sorted(initial["Scenario"].dropna().astype(str).unique().tolist())
+    scenario_filter = st.sidebar.selectbox("Demand scenario", scenarios)
+    policies = ["All"] + sorted(initial["Policy"].dropna().astype(str).unique().tolist())
+    policy_filter = st.sidebar.selectbox("Policy", policies)
+else:
+    scenario_filter, policy_filter = "All", "All"
 
 st.sidebar.divider()
 st.sidebar.markdown("### About this demo")
-st.sidebar.caption(
-    "SafeICU is a synthetic educational simulation. It is not a clinical "
-    "decision-support system and must not be used for real patient care."
-)
-st.sidebar.caption("Results are loaded from versioned CSV files; this dashboard does not retrain models.")
+st.sidebar.caption("Synthetic educational simulation only. Not a clinical decision-support system.")
+st.sidebar.caption("The live simulator below uses a transparent rule-based demo policy. It does not load trained DQN/PPO weights.")
+
+st.markdown("""
+<div class="hero">
+  <div class="eyebrow">Safety-aware reinforcement learning lab</div>
+  <h1>🏥 SafeICU</h1>
+  <p>Explore synthetic ICU resource allocation, compare stored RL evaluations, and run an interactive 24-hour demonstration.</p>
+</div>
+""", unsafe_allow_html=True)
+st.markdown('<span class="note">SYNTHETIC DATA · RESEARCH PROTOTYPE · NOT FOR REAL CLINICAL USE</span>', unsafe_allow_html=True)
+
+if initial is None or initial.empty:
+    st.error("No evaluation CSV found. Upload safeicu_initial_comparison.csv or safeicu_final_evaluation.csv beside app.py.")
+    st.stop()
 
 filtered = initial.copy()
-if scenario != "All":
-    filtered = filtered[filtered["Scenario"].astype(str) == scenario]
-if selected_policy != "All":
-    filtered = filtered[filtered["Policy"].astype(str) == selected_policy]
+if scenario_filter != "All":
+    filtered = filtered[filtered["Scenario"].astype(str) == scenario_filter]
+if policy_filter != "All":
+    filtered = filtered[filtered["Policy"].astype(str) == policy_filter]
 
-# Header
-st.markdown(
-    """
-    <div class="hero">
-      <div class="eyebrow">Safety-aware reinforcement learning lab</div>
-      <h1>🏥 SafeICU</h1>
-      <p>Evaluating resource-allocation policies under normal demand, emergency surge,
-      and constrained-capacity scenarios.</p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<span class="status-pill">SYNTHETIC DATA</span> '
-    '<span class="small-note">Research prototype · Not a clinical decision system</span>',
-    unsafe_allow_html=True,
-)
+metric_reward = "Reward" if "Reward" in filtered.columns else "Mean_Reward" if "Mean_Reward" in filtered.columns else None
+metric_wait = next((c for c in ["Critical Waiting Patient-Hours", "Critical Waiting Burden", "Mean_Critical_Waiting_Burden"] if c in filtered.columns), None)
 
-# KPI row: use available columns, clearly describe episode count.
 k1, k2, k3, k4 = st.columns(4)
 k1.metric("Evaluation episodes", f"{len(filtered):,}")
 k2.metric("Policies in view", int(filtered["Policy"].nunique()))
 k3.metric("Scenarios in view", int(filtered["Scenario"].nunique()))
-if "Seed" in filtered.columns:
-    k4.metric("Unique evaluation seeds", int(filtered["Seed"].nunique()))
-else:
-    k4.metric("Source", "CSV results")
+k4.metric("Evaluation seeds", int(filtered["Seed"].nunique()) if "Seed" in filtered.columns else "Not recorded")
 
-st.divider()
+tabs = st.tabs(["🏠 Overview", "📊 Policy laboratory", "🛡️ Safety audit", "🧪 Live simulation", "🤖 Agentic supervisor", "📁 Data & methodology"])
 
-tab_overview, tab_policies, tab_safety, tab_agent, tab_data = st.tabs(
-    ["🏠 Overview", "📊 Policy laboratory", "🛡️ Safety audit", "🤖 Agentic supervisor", "📁 Data & methodology"]
-)
-
-def first_existing_column(df, names):
-    for name in names:
-        if name in df.columns:
-            return name
-    return None
-
-with tab_overview:
+with tabs[0]:
     st.subheader("Experiment overview")
-    st.markdown(
-        '<p class="section-intro">Use the filters on the left to inspect a specific demand scenario or policy.</p>',
-        unsafe_allow_html=True,
-    )
-    a, b = st.columns([1.15, 1])
-    with a:
+    left, right = st.columns(2)
+    with left:
         st.markdown("#### Mean reward by policy")
-        reward_col = first_existing_column(filtered, ["Reward", "Mean_Reward"])
-        if reward_col:
-            reward = filtered.groupby("Policy", as_index=False)[reward_col].mean()
-            fig, ax = plt.subplots(figsize=(8, 4))
-            ax.bar(reward["Policy"], reward[reward_col])
+        if metric_reward:
+            g = filtered.groupby("Policy", as_index=False)[metric_reward].mean()
+            fig, ax = plt.subplots(figsize=(7, 3.7))
+            ax.bar(g["Policy"], g[metric_reward])
             ax.set_ylabel("Mean cumulative reward")
             ax.tick_params(axis="x", rotation=25)
             ax.grid(axis="y", alpha=.2)
@@ -169,175 +112,192 @@ with tab_overview:
             st.pyplot(fig, use_container_width=True)
             plt.close(fig)
         else:
-            st.info("Reward column is not available in this CSV.")
-    with b:
+            st.info("Reward metric unavailable in this dataset.")
+    with right:
         st.markdown("#### Critical-patient waiting burden")
-        waiting_col = first_existing_column(
-            filtered,
-            ["Critical Waiting Patient-Hours", "Critical Waiting Burden",
-             "Mean_Critical_Waiting_Burden", "Critical_Waiting_Patient_Hours"]
-        )
-        if waiting_col:
-            waiting = filtered.groupby("Policy", as_index=False)[waiting_col].mean()
-            fig, ax = plt.subplots(figsize=(8, 4))
-            ax.bar(waiting["Policy"], waiting[waiting_col])
-            ax.set_ylabel("Waiting burden (patient-hours where applicable)")
+        if metric_wait:
+            g = filtered.groupby("Policy", as_index=False)[metric_wait].mean()
+            fig, ax = plt.subplots(figsize=(7, 3.7))
+            ax.bar(g["Policy"], g[metric_wait])
+            ax.set_ylabel("Waiting burden (source metric)")
             ax.tick_params(axis="x", rotation=25)
             ax.grid(axis="y", alpha=.2)
             fig.tight_layout()
             st.pyplot(fig, use_container_width=True)
             plt.close(fig)
         else:
-            st.info("A critical-waiting metric is not available in this CSV.")
+            st.info("Waiting-burden metric unavailable.")
     st.markdown("#### Filtered evaluation records")
     st.dataframe(filtered, use_container_width=True, hide_index=True)
-    st.download_button(
-        "⬇️ Download filtered records",
-        data=filtered.to_csv(index=False),
-        file_name="safeicu_filtered_evaluation.csv",
-        mime="text/csv",
-    )
+    st.download_button("⬇️ Download filtered evaluation", filtered.to_csv(index=False), "safeicu_filtered_evaluation.csv", "text/csv")
 
-with tab_policies:
+with tabs[1]:
     st.subheader("Policy laboratory")
-    st.markdown(
-        "Compare the observed performance of the baseline, DQN, PPO, and shielded variants. "
-        "Higher reward is not automatically safer; review safety and waiting metrics together."
-    )
-    numeric_cols = [c for c in filtered.select_dtypes(include="number").columns
-                    if c not in {"Seed"}]
-    if not numeric_cols:
-        st.info("No numeric metrics found in the selected data.")
-    else:
-        default_metric = (
-            "Reward" if "Reward" in numeric_cols
-            else "Mean_Reward" if "Mean_Reward" in numeric_cols
-            else numeric_cols[0]
-        )
-        metric = st.selectbox("Metric to compare", numeric_cols, index=numeric_cols.index(default_metric))
-        # Aggregate with named outputs so the resulting schema is stable
-        # across supported pandas versions.
-        summary = (
-            filtered.groupby("Policy")[metric]
-            .agg(Mean="mean", StdDev="std")
-            .reset_index()
-        )
-        st.dataframe(summary.round(3), use_container_width=True, hide_index=True)
+    st.write("Explore stored evaluation metrics. Results are read from CSV files; this page does not retrain the RL models.")
+    numeric_cols = [c for c in filtered.select_dtypes(include="number").columns if c != "Seed"]
+    if numeric_cols:
+        default = "Reward" if "Reward" in numeric_cols else numeric_cols[0]
+        chosen_metric = st.selectbox("Metric to compare", numeric_cols, index=numeric_cols.index(default), key="lab_metric")
+        grouped = filtered.groupby("Policy")[chosen_metric].agg(["mean", "std"]).reset_index()
+        grouped = grouped.rename(columns={"mean": "Mean", "std": "StdDev"})
+        st.dataframe(grouped.round(3), use_container_width=True, hide_index=True)
         fig, ax = plt.subplots(figsize=(10, 4))
-        ax.bar(summary["Policy"], summary["Mean"])
-        ax.set_title(f"Mean {metric} by policy")
-        ax.set_ylabel(metric)
+        ax.bar(grouped["Policy"], grouped["Mean"])
+        ax.set_title(f"Mean {chosen_metric} by policy")
+        ax.set_ylabel(chosen_metric)
         ax.tick_params(axis="x", rotation=25)
         ax.grid(axis="y", alpha=.2)
         fig.tight_layout()
         st.pyplot(fig, use_container_width=True)
         plt.close(fig)
-        st.caption("Standard deviation is shown in the table when multiple rows are available per policy.")
+    else:
+        st.info("No numeric metrics available.")
 
-with tab_safety:
+with tabs[2]:
     st.subheader("Safety audit")
-    st.markdown(
-        "The safety shield is a rule-based action filter. Intervention counts represent rejected/modified "
-        "proposals; executed violations are a separate metric and should not be conflated."
-    )
-    violation_col = first_existing_column(
-        filtered, ["Executed Violations", "constraint_violations", "Constraint Violations"]
-    )
-    intervention_col = first_existing_column(
-        filtered, ["Shield Interventions", "Mean_Shield_Interventions",
-                   "shield_interventions", "interventions"]
-    )
-    delay_col = first_existing_column(
-        filtered, ["Mean Critical Admission Delay", "mean_critical_wait",
-                   "Mean_Critical_Admission_Delay"]
-    )
-    s1, s2, s3 = st.columns(3)
-    if violation_col:
-        s1.metric("Mean executed violations", f"{filtered[violation_col].mean():.2f}")
-    else:
-        s1.metric("Executed violations", "Not recorded")
-    if intervention_col:
-        s2.metric("Mean shield interventions", f"{filtered[intervention_col].mean():.2f}")
-    else:
-        s2.metric("Shield interventions", "Not recorded")
-    if delay_col:
-        s3.metric("Mean critical admission delay", f"{filtered[delay_col].mean():.2f}")
-    else:
-        s3.metric("Admission delay", "Not recorded")
+    st.write("Shield interventions and executed violations are different. A blocked proposal is not an executed violation.")
+    viol_col = next((c for c in ["Executed Violations", "constraint_violations", "Constraint Violations"] if c in filtered.columns), None)
+    inter_col = next((c for c in ["Shield Interventions", "Mean_Shield_Interventions", "shield_interventions"] if c in filtered.columns), None)
+    delay_col = next((c for c in ["Mean Critical Admission Delay", "Mean_Critical_Admission_Delay"] if c in filtered.columns), None)
+    a, b, c = st.columns(3)
+    a.metric("Executed violations", f"{filtered[viol_col].mean():.2f}" if viol_col else "Not recorded")
+    b.metric("Mean shield interventions", f"{filtered[inter_col].mean():.2f}" if inter_col else "Not recorded")
+    c.metric("Mean critical admission delay", f"{filtered[delay_col].mean():.2f}" if delay_col else "Not recorded")
     if dqn_tests is not None:
-        st.markdown("#### DQN safety regression tests")
+        st.markdown("#### DQN regression tests")
         st.dataframe(dqn_tests, use_container_width=True, hide_index=True)
     if ppo_tests is not None:
-        st.markdown("#### PPO safety regression tests")
+        st.markdown("#### PPO regression tests")
         st.dataframe(ppo_tests, use_container_width=True, hide_index=True)
-    if not violation_col:
-        st.warning(
-            "The selected evaluation file does not include executed-violation counts. "
-            "Do not claim zero violations based only on a missing column."
-        )
+    if not viol_col:
+        st.warning("Executed-violation counts are absent from the selected CSV. Do not infer zero violations from missing data.")
 
-with tab_agent:
+with tabs[3]:
+    st.subheader("Interactive 24-hour ICU simulation")
+    st.markdown("This is a new synthetic demonstration episode. It animates the simulated resource and queue trajectory when you run it. **It uses an explicit priority-rule demo policy, not the trained DQN/PPO models.**")
+    c1, c2, c3 = st.columns(3)
+    sim_scenario = c1.selectbox("Simulation scenario", ["normal", "surge", "shortage"], key="sim_scenario")
+    sim_seed = c2.number_input("Random seed", min_value=1, max_value=99999, value=42, step=1)
+    horizon = c3.selectbox("Duration (hours)", [12, 24, 48], index=1)
+    run = st.button("▶ Run synthetic simulation", type="primary")
+    if run:
+        rng = np.random.default_rng(int(sim_seed))
+        beds, monitors, staff = ({"normal": (10, 8, 6), "surge": (10, 8, 6), "shortage": (5, 4, 3)})[sim_scenario]
+        arrival_rate = {"normal": 1.0, "surge": 2.2, "shortage": 1.5}[sim_scenario]
+        if sim_scenario == "shortage":
+            arrival_rate = 1.5
+        waiting = [0, 0, 0]  # critical, high, moderate
+        active = []
+        records = []
+        arrivals_total = 0
+        admissions_total = 0
+        violations = 0
+        for hour in range(horizon):
+            active = [r - 1 for r in active if r - 1 > 0]
+            arrivals = int(rng.poisson(arrival_rate))
+            cats = rng.choice(3, size=arrivals, p=[0.20, 0.35, 0.45]) if arrivals else []
+            for cat in cats:
+                waiting[int(cat)] += 1
+            arrivals_total += arrivals
+            occupied = len(active)
+            capacity_available = occupied < min(beds, monitors, staff)
+            admitted_now = 0
+            if capacity_available and sum(waiting) > 0:
+                # Transparent priority rule: critical > high > moderate.
+                category = next(i for i, count in enumerate(waiting) if count > 0)
+                waiting[category] -= 1
+                active.append(int(rng.integers(2, 7)))
+                admissions_total += 1
+                admitted_now = 1
+            occupied = len(active)
+            records.append({
+                "Hour": hour + 1,
+                "Arrivals": arrivals,
+                "Critical waiting": waiting[0],
+                "High waiting": waiting[1],
+                "Moderate waiting": waiting[2],
+                "Active care slots": occupied,
+                "Bed utilization": occupied / beds,
+                "Monitor utilization": occupied / monitors,
+                "Staff utilization": occupied / staff,
+                "Admissions this hour": admitted_now,
+                "Waiting burden": waiting[0]
+            })
+        sim_df = pd.DataFrame(records)
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Total arrivals", arrivals_total)
+        m2.metric("Admissions", admissions_total)
+        m3.metric("End-of-run critical queue", int(sim_df["Critical waiting"].iloc[-1]))
+        m4.metric("Mean bed utilization", f"{sim_df['Bed utilization'].mean():.0%}")
+        st.markdown("#### Queue and resource trajectory")
+        fig, ax = plt.subplots(figsize=(10, 4))
+        for col in ["Critical waiting", "High waiting", "Moderate waiting"]:
+            ax.plot(sim_df["Hour"], sim_df[col], marker="o", markersize=3, label=col)
+        ax.set_xlabel("Simulated hour")
+        ax.set_ylabel("Patients waiting")
+        ax.legend()
+        ax.grid(alpha=.2)
+        fig.tight_layout()
+        st.pyplot(fig, use_container_width=True)
+        plt.close(fig)
+        fig, ax = plt.subplots(figsize=(10, 3.5))
+        ax.plot(sim_df["Hour"], sim_df["Bed utilization"], label="Beds")
+        ax.plot(sim_df["Hour"], sim_df["Monitor utilization"], label="Monitors")
+        ax.plot(sim_df["Hour"], sim_df["Staff utilization"], label="Staff")
+        ax.set_ylim(0, 1.05)
+        ax.set_xlabel("Simulated hour")
+        ax.set_ylabel("Utilization")
+        ax.legend()
+        ax.grid(alpha=.2)
+        fig.tight_layout()
+        st.pyplot(fig, use_container_width=True)
+        plt.close(fig)
+        st.markdown("#### Hour-by-hour simulation log")
+        st.dataframe(sim_df, use_container_width=True, hide_index=True)
+        st.download_button("⬇️ Download simulation log", sim_df.to_csv(index=False), "safeicu_live_demo_log.csv", "text/csv")
+        st.info("This is a live-generated synthetic episode using a rule-based priority policy. It is not inference from your trained DQN/PPO weights. To demonstrate the trained agents live, their saved model files and matching environment implementation must also be deployed.")
+    else:
+        st.info("Choose a scenario and click **Run synthetic simulation** to generate a new episode. The result is generated on demand, not read from the saved evaluation CSV.")
+
+with tabs[4]:
     st.subheader("Agentic AI experiment supervisor")
-    st.markdown(
-        "This prototype uses a rule-based supervisor that analyzes saved results, chooses a follow-up "
-        "scenario, calls a bounded experiment runner during notebook execution, and summarizes outcomes. "
-        "The deployed dashboard displays stored outputs; it does not execute training or experiments."
-    )
-    if agent_report is not None and not agent_report.empty:
-        st.markdown("#### Follow-up experiment summary")
+    st.write("The notebook supervisor analyzed saved results and generated a bounded follow-up experiment. The deployed dashboard shows those saved outputs; it does not currently execute the supervisor or train agents on the server.")
+    if agent_report is not None:
+        st.markdown("#### Follow-up summary")
         st.dataframe(agent_report, use_container_width=True, hide_index=True)
     else:
-        st.info("Agentic report CSV is not present.")
-    if followup is not None and not followup.empty:
+        st.info("safeicu_agentic_report.csv is missing.")
+    if followup is not None:
         st.markdown("#### Follow-up experiment records")
         st.dataframe(followup, use_container_width=True, hide_index=True)
-        st.download_button(
-            "⬇️ Download agentic follow-up data",
-            data=followup.to_csv(index=False),
-            file_name="safeicu_agentic_followup.csv",
-            mime="text/csv",
-        )
-    if final_summary is not None and not final_summary.empty:
+        st.download_button("⬇️ Download follow-up data", followup.to_csv(index=False), "safeicu_agentic_followup.csv", "text/csv")
+    if final_summary is not None:
         st.markdown("#### Improved evaluation summary")
         st.dataframe(final_summary, use_container_width=True, hide_index=True)
 
-with tab_data:
+with tabs[5]:
     st.subheader("Data, assumptions & methodology")
-    st.markdown(
-        """
-        **Environment:** synthetic hourly ICU simulation with discrete patient-priority categories
-        and constrained beds, monitoring units, and staff capacity.
+    st.markdown("""
+**Environment:** synthetic hourly ICU simulation with discrete priority categories and constrained resources.
 
-        **Policies:** priority-based baseline, DQN, PPO, and safety-shielded variants where available.
+**Policies:** priority baseline, DQN, PPO, and shielded variants where the saved data includes them.
 
-        **Scenarios:** normal arrivals, surge arrivals, and reduced resource capacity.
+**Scenarios:** normal demand, surge demand, and reduced resource capacity.
 
-        **Interpretation:** results describe only the implemented simulator and reward function. They do
-        not establish clinical validity, patient outcomes, or safety in a real hospital.
-        """
-    )
-    st.markdown("#### Available data files")
-    files = [
-        "safeicu_initial_comparison.csv",
-        "safeicu_final_evaluation.csv",
-        "safeicu_final_summary.csv",
-        "safeicu_agentic_followup.csv",
-        "safeicu_agentic_report.csv",
-        "safeicu_dqn_safety_tests.csv",
-        "safeicu_ppo_safety_tests.csv",
+**Live simulation tab:** generates a new synthetic episode using a transparent priority rule. It is deliberately not labelled as trained-agent inference.
+
+**Limitations:** this simulator is not medically validated. Results describe only the code, reward function, and synthetic assumptions used in this project.
+""")
+    st.markdown("#### Data files in repository")
+    expected_files = [
+        "safeicu_initial_comparison.csv", "safeicu_final_evaluation.csv",
+        "safeicu_final_summary.csv", "safeicu_agentic_followup.csv",
+        "safeicu_agentic_report.csv", "safeicu_dqn_safety_tests.csv",
+        "safeicu_ppo_safety_tests.csv"
     ]
-    for filename in files:
-        path = DATA_DIR / filename
-        st.write(("✅ " if path.exists() else "— ") + filename)
-    st.download_button(
-        "⬇️ Download current filtered dataset",
-        data=filtered.to_csv(index=False),
-        file_name="safeicu_evaluation_export.csv",
-        mime="text/csv",
-    )
+    for name in expected_files:
+        st.write(("✅ " if (DATA_DIR / name).exists() else "— ") + name)
+    st.download_button("⬇️ Download filtered data", filtered.to_csv(index=False), "safeicu_evaluation_export.csv", "text/csv")
 
 st.divider()
-st.caption(
-    "SafeICU research prototype · Synthetic data only · Not for real clinical use. "
-    "Interpret every metric within the simulator's assumptions."
-)
+st.caption("SafeICU research prototype · Synthetic data only · Not for real clinical use.")
