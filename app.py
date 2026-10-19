@@ -6,6 +6,11 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 try:
+    from streamlit_autorefresh import st_autorefresh
+except Exception:
+    st_autorefresh = None
+
+try:
     from stable_baselines3 import DQN, PPO
 except Exception:
     DQN = PPO = None
@@ -15,10 +20,6 @@ try:
 except Exception:
     SafeICURLEnv = None
 
-try:
-    from streamlit_autorefresh import st_autorefresh
-except Exception:
-    st_autorefresh = None
 
 st.set_page_config(
     page_title="SafeICU | Safety-Aware RL Lab",
@@ -50,6 +51,7 @@ st.markdown("""
     background: linear-gradient(115deg,#14243b,#124149);
     border: 1px solid #2b6570;
     margin-bottom: 1rem;
+    box-shadow: 0 14px 40px rgba(0,0,0,.18);
 }
 .eyebrow {
     color: #79e5d4;
@@ -62,97 +64,108 @@ st.markdown("""
     color: #f5f8ff;
     margin: .25rem 0;
     font-size: 2.65rem;
+    letter-spacing: -.04em;
 }
-.hero p { color: #c4d4e8; margin: 0; }
+.hero p {
+    color: #c4d4e8;
+    margin: 0;
+    font-size: 1rem;
+}
 div[data-testid="stMetric"] {
     background: linear-gradient(145deg,#142138,#101a2b);
     border: 1px solid #2a3d57;
     border-radius: 15px;
     padding: .85rem 1rem;
+    box-shadow: 0 5px 18px rgba(0,0,0,.12);
 }
-div[data-testid="stMetricLabel"] { color: #aabbd0; }
-div[data-testid="stMetricValue"] { color: #f5f8ff; }
+div[data-testid="stMetricLabel"] { color:#aabbd0; }
+div[data-testid="stMetricValue"] { color:#f5f8ff; }
 .note {
-    color: #9cacc2;
-    font-size: .82rem;
-    letter-spacing: .04em;
+    color:#9cacc2;
+    font-size:.82rem;
+    letter-spacing:.04em;
 }
 .room-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: #111e31;
-    border: 1px solid #2a3d57;
-    border-radius: 14px;
-    margin: 8px 0 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    padding:12px 16px;
+    background:#111e31;
+    border:1px solid #2a3d57;
+    border-radius:14px;
+    margin:8px 0 14px;
 }
 .room-label {
-    font-weight: 800;
-    letter-spacing: .08em;
-    font-size: .82rem;
-    color: #b9cadf;
+    font-weight:800;
+    letter-spacing:.08em;
+    font-size:.82rem;
+    color:#b9cadf;
 }
 .pill {
-    display: inline-block;
-    border-radius: 999px;
-    padding: 4px 9px;
-    font-size: .72rem;
-    font-weight: 800;
-    margin: 2px;
+    display:inline-block;
+    border-radius:999px;
+    padding:4px 9px;
+    font-size:.72rem;
+    font-weight:800;
+    margin:2px;
 }
 .pill-green {
-    background: #123d35;
-    color: #8cf0cf;
-    border: 1px solid #286b5a;
+    background:#123d35;
+    color:#8cf0cf;
+    border:1px solid #286b5a;
 }
 .pill-blue {
-    background: #142f4d;
-    color: #9bd2ff;
-    border: 1px solid #315a80;
+    background:#142f4d;
+    color:#9bd2ff;
+    border:1px solid #315a80;
 }
 .bed-card {
-    min-height: 145px;
-    border-radius: 14px;
-    padding: 12px;
-    margin: 4px 0 10px;
-    border: 1px solid #30435a;
-    background: linear-gradient(150deg,#17243a,#111b2b);
+    min-height:145px;
+    border-radius:14px;
+    padding:12px;
+    margin:4px 0 10px;
+    border:1px solid #30435a;
+    background:linear-gradient(150deg,#17243a,#111b2b);
 }
 .bed-card.occupied {
-    border-color: #28796f;
-    background: linear-gradient(150deg,#123a3a,#142536);
+    border-color:#28796f;
+    background:linear-gradient(150deg,#123a3a,#142536);
 }
 .bed-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    color: #a9bbd0;
-    font-size: .68rem;
-    font-weight: 800;
-    letter-spacing: .07em;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    color:#a9bbd0;
+    font-size:.68rem;
+    font-weight:800;
+    letter-spacing:.07em;
 }
-.bed-icon { font-size: 1.75rem; margin: 8px 0 4px; }
-.bed-status { font-size: .8rem; font-weight: 800; color: #e7f2ff; }
-.bed-meta { font-size: .72rem; color: #a8bad0; margin-top: 4px; }
+.bed-icon { font-size:1.75rem; margin:8px 0 4px; }
+.bed-status { font-size:.8rem; font-weight:800; color:#e7f2ff; }
+.bed-meta { font-size:.72rem; color:#a8bad0; margin-top:4px; }
 .queue-card {
-    border: 1px solid #2b3e56;
-    border-radius: 14px;
-    padding: 14px;
-    background: #111d30;
+    border:1px solid #2b3e56;
+    border-radius:14px;
+    padding:14px;
+    background:#111d30;
 }
-.queue-count { font-size: 1.9rem; font-weight: 800; color: #f5f8ff; }
-.queue-name { color: #b5c7dc; font-size: .78rem; }
-.stButton > button { border-radius: 10px; }
-hr { border-color: #27384e; }
+.queue-count { font-size:1.9rem; font-weight:800; color:#f5f8ff; }
+.queue-name { color:#b5c7dc; font-size:.78rem; }
+[data-testid="stProgressBar"] > div > div {
+    background: linear-gradient(90deg,#21b6a8,#7ee7c4);
+}
+.stButton > button[kind="primary"] {
+    border:0;
+    background:linear-gradient(90deg,#0e9f91,#16b7a8);
+    color:#061c24;
+    font-weight:800;
+}
+.stButton > button { border-radius:10px; }
+hr { border-color:#27384e; }
 </style>
 """, unsafe_allow_html=True)
 
-
-# --------------------------------------------------
-# LOAD FILES
-# --------------------------------------------------
 
 def load_csv(filename):
     path = DATA_DIR / filename
@@ -164,19 +177,16 @@ def load_csv(filename):
         return None
 
 
-# Prefer the new, independently evaluated results.
 initial = load_csv("safeicu_final_evaluation.csv")
-if initial is None or initial.empty:
+if initial is None:
     initial = load_csv("safeicu_initial_comparison.csv")
-    evaluation_source = "Initial comparison (fallback)"
-else:
-    evaluation_source = "Independent evaluation"
 
 final_summary = load_csv("safeicu_final_summary.csv")
 followup = load_csv("safeicu_agentic_followup.csv")
 agent_report = load_csv("safeicu_agentic_report.csv")
 dqn_tests = load_csv("safeicu_dqn_safety_tests.csv")
 ppo_tests = load_csv("safeicu_ppo_safety_tests.csv")
+
 
 st.sidebar.markdown("## 🎛️ Experiment controls")
 st.sidebar.caption("Filter stored evaluation results.")
@@ -189,25 +199,33 @@ if (
     scenarios = ["All"] + sorted(
         initial["Scenario"].dropna().astype(str).unique().tolist()
     )
+    scenario_filter = st.sidebar.selectbox(
+        "Demand scenario", scenarios
+    )
     policies = ["All"] + sorted(
         initial["Policy"].dropna().astype(str).unique().tolist()
     )
-    scenario_filter = st.sidebar.selectbox("Demand scenario", scenarios)
     policy_filter = st.sidebar.selectbox("Policy", policies)
 else:
     scenario_filter, policy_filter = "All", "All"
 
 st.sidebar.divider()
-st.sidebar.caption(f"Data source: {evaluation_source}")
-st.sidebar.caption("Synthetic educational simulation only.")
-st.sidebar.caption("Not a clinical decision-support system.")
+st.sidebar.markdown("### About this demo")
+st.sidebar.caption(
+    "Synthetic educational simulation only. "
+    "Not a clinical decision-support system."
+)
+st.sidebar.caption(
+    "The Live ICU tab runs saved DQN/PPO models when their "
+    "files and matching environment are available."
+)
 
 st.markdown("""
 <div class="hero">
   <div class="eyebrow">Safety-aware reinforcement learning lab</div>
   <h1>🏥 SafeICU</h1>
-  <p>Explore synthetic ICU resource allocation, compare stored RL evaluations,
-  and run an interactive 24-hour demonstration.</p>
+  <p>Explore synthetic ICU resource allocation, compare stored RL
+  evaluations, and run an interactive ICU simulation.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -219,19 +237,10 @@ st.markdown(
 
 if initial is None or initial.empty:
     st.error(
-        "No evaluation CSV found. Upload safeicu_initial_comparison.csv "
-        "or safeicu_final_evaluation.csv beside app.py."
+        "No evaluation CSV found. Upload "
+        "safeicu_initial_comparison.csv or "
+        "safeicu_final_evaluation.csv beside app.py."
     )
-    st.stop()
-
-required = {
-    "Policy", "Scenario", "Reward", "Admissions",
-    "Critical Waiting Burden", "Shield Interventions"
-}
-missing = required - set(initial.columns)
-
-if missing:
-    st.error("Evaluation CSV missing columns: " + ", ".join(sorted(missing)))
     st.stop()
 
 filtered = initial.copy()
@@ -251,6 +260,7 @@ metric_reward = (
     else "Mean_Reward" if "Mean_Reward" in filtered.columns
     else None
 )
+
 metric_wait = next(
     (
         c for c in [
@@ -269,8 +279,8 @@ k2.metric("Policies in view", int(filtered["Policy"].nunique()))
 k3.metric("Scenarios in view", int(filtered["Scenario"].nunique()))
 k4.metric(
     "Evaluation seeds",
-    int(filtered["Seed"].nunique()) if "Seed" in filtered.columns
-    else "Not recorded",
+    int(filtered["Seed"].nunique())
+    if "Seed" in filtered.columns else "Not recorded",
 )
 
 tabs = st.tabs([
@@ -283,24 +293,22 @@ tabs = st.tabs([
 ])
 
 
-# --------------------------------------------------
-# TAB 1: OVERVIEW
-# --------------------------------------------------
-
+# ============================================================
+# OVERVIEW
+# ============================================================
 with tabs[0]:
     st.subheader("Experiment overview")
-
     left, right = st.columns(2)
 
     with left:
         st.markdown("#### Mean reward by policy")
         if metric_reward:
-            grouped = filtered.groupby(
+            g = filtered.groupby(
                 "Policy", as_index=False
             )[metric_reward].mean()
 
             fig, ax = plt.subplots(figsize=(7, 3.7))
-            ax.bar(grouped["Policy"], grouped[metric_reward])
+            ax.bar(g["Policy"], g[metric_reward])
             ax.set_ylabel("Mean cumulative reward")
             ax.tick_params(axis="x", rotation=25)
             ax.grid(axis="y", alpha=.2)
@@ -308,17 +316,17 @@ with tabs[0]:
             st.pyplot(fig, use_container_width=True)
             plt.close(fig)
         else:
-            st.info("Reward metric unavailable.")
+            st.info("Reward metric unavailable in this dataset.")
 
     with right:
         st.markdown("#### Critical-patient waiting burden")
         if metric_wait:
-            grouped = filtered.groupby(
+            g = filtered.groupby(
                 "Policy", as_index=False
             )[metric_wait].mean()
 
             fig, ax = plt.subplots(figsize=(7, 3.7))
-            ax.bar(grouped["Policy"], grouped[metric_wait])
+            ax.bar(g["Policy"], g[metric_wait])
             ax.set_ylabel("Waiting burden (source metric)")
             ax.tick_params(axis="x", rotation=25)
             ax.grid(axis="y", alpha=.2)
@@ -330,7 +338,6 @@ with tabs[0]:
 
     st.markdown("#### Filtered evaluation records")
     st.dataframe(filtered, use_container_width=True, hide_index=True)
-
     st.download_button(
         "⬇️ Download filtered evaluation",
         filtered.to_csv(index=False),
@@ -339,14 +346,14 @@ with tabs[0]:
     )
 
 
-# --------------------------------------------------
-# TAB 2: POLICY LABORATORY
-# --------------------------------------------------
-
+# ============================================================
+# POLICY LABORATORY
+# ============================================================
 with tabs[1]:
     st.subheader("Policy laboratory")
     st.write(
-        "Explore stored evaluation metrics. This tab does not retrain models."
+        "Explore stored evaluation metrics. Results are read from "
+        "CSV files; this page does not retrain the RL models."
     )
 
     numeric_cols = [
@@ -355,7 +362,9 @@ with tabs[1]:
     ]
 
     if numeric_cols:
-        default = "Reward" if "Reward" in numeric_cols else numeric_cols[0]
+        default = (
+            "Reward" if "Reward" in numeric_cols else numeric_cols[0]
+        )
         chosen_metric = st.selectbox(
             "Metric to compare",
             numeric_cols,
@@ -389,10 +398,9 @@ with tabs[1]:
         st.info("No numeric metrics available.")
 
 
-# --------------------------------------------------
-# TAB 3: SAFETY AUDIT
-# --------------------------------------------------
-
+# ============================================================
+# SAFETY AUDIT
+# ============================================================
 with tabs[2]:
     st.subheader("Safety audit")
     st.write(
@@ -406,12 +414,12 @@ with tabs[2]:
                 "Executed Violations",
                 "constraint_violations",
                 "Constraint Violations",
-                "Reported Violations",
             ]
             if c in filtered.columns
         ),
         None,
     )
+
     inter_col = next(
         (
             c for c in [
@@ -424,61 +432,55 @@ with tabs[2]:
         None,
     )
 
-    a, b = st.columns(2)
+    delay_col = next(
+        (
+            c for c in [
+                "Mean Critical Admission Delay",
+                "Mean_Critical_Admission_Delay",
+            ]
+            if c in filtered.columns
+        ),
+        None,
+    )
+
+    a, b, c = st.columns(3)
     a.metric(
-        "Mean reported violations",
-        f"{filtered[viol_col].mean():.2f}"
-        if viol_col else "Not recorded",
+        "Executed violations",
+        f"{filtered[viol_col].mean():.2f}" if viol_col else "Not recorded",
     )
     b.metric(
         "Mean shield interventions",
-        f"{filtered[inter_col].mean():.2f}"
-        if inter_col else "Not recorded",
+        f"{filtered[inter_col].mean():.2f}" if inter_col else "Not recorded",
+    )
+    c.metric(
+        "Mean critical admission delay",
+        f"{filtered[delay_col].mean():.2f}" if delay_col else "Not recorded",
     )
 
     if dqn_tests is not None:
         st.markdown("#### DQN regression tests")
         st.dataframe(dqn_tests, use_container_width=True, hide_index=True)
-    else:
-        st.info("DQN safety-test file is missing.")
 
     if ppo_tests is not None:
         st.markdown("#### PPO regression tests")
         st.dataframe(ppo_tests, use_container_width=True, hide_index=True)
-    else:
-        st.info("PPO safety-test file is missing.")
-
-    check_col = "Resource Limit Check Passed"
-    if check_col in filtered.columns:
-        checks = filtered[check_col].fillna(False).astype(bool)
-        st.metric(
-            "Recorded resource-limit checks passed",
-            f"{int(checks.sum())}/{len(checks)}",
-        )
 
     if not viol_col:
         st.warning(
-            "Executed-violation counts are absent. Missing data must not "
-            "be interpreted as proof of zero violations."
-        )
-    else:
-        st.warning(
-            "Interpret reported violation counts with the environment code; "
-            "the current environment's violation counter may not capture "
-            "every possible unsafe condition."
+            "Executed-violation counts are absent from the selected CSV. "
+            "Do not infer zero violations from missing data."
         )
 
 
-# --------------------------------------------------
-# TAB 4: LIVE SIMULATION
-# --------------------------------------------------
-
+# ============================================================
+# LIVE ICU DIGITAL TWIN WITH AUTOPLAY
+# ============================================================
 with tabs[3]:
     st.subheader("Live ICU Digital Twin")
     st.markdown(
-        "Run a step-by-step synthetic ICU episode. Select a policy, "
-        "scenario and seed, then advance the simulation. This is an "
-        "educational prototype, not a clinical system."
+        "Watch a synthetic ICU environment evolve hour by hour. "
+        "Play runs automatically; Pause stops the animation, and "
+        "Resume continues the same episode. Educational prototype only."
     )
 
     model_dir = DATA_DIR / "models"
@@ -494,40 +496,50 @@ with tabs[3]:
     b.metric("PPO checkpoint", "READY" if ppo_available else "NOT FOUND")
     c.metric("Environment", "READY" if env_available else "NOT FOUND")
 
-    c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1.5])
-    live_scenario = c1.selectbox(
+    c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
+    scenario = c1.selectbox(
         "Demand scenario",
         ["normal", "surge", "shortage"],
         key="live_scenario",
     )
-    live_policy = c2.selectbox(
+    policy = c2.selectbox(
         "Live policy",
         ["DQN", "PPO", "Priority baseline"],
         key="live_policy",
     )
     horizon = c3.selectbox(
-        "Episode length", [12, 24, 48], index=1, key="live_horizon"
+        "Episode length", [12, 24, 48],
+        index=1, key="live_horizon",
     )
     seed = c4.number_input(
-        "Random seed", min_value=1, max_value=999999,
-        value=42, step=1, key="live_seed",
+        "Random seed",
+        min_value=1,
+        max_value=999999,
+        value=42,
+        step=1,
+        key="live_seed",
     )
 
-    config = (live_policy, live_scenario, int(horizon), int(seed))
+    config = (policy, scenario, int(horizon), int(seed))
     model_ready = {
         "DQN": dqn_available,
         "PPO": ppo_available,
         "Priority baseline": True,
-    }[live_policy]
+    }[policy]
 
-    def baseline_action(environment):
+    if "safeicu_autoplay" not in st.session_state:
+        st.session_state["safeicu_autoplay"] = False
+
+    def _safeicu_baseline_action(environment):
         # Actions: 0=wait, 1=critical, 2=high, 3=moderate.
         for category, action in enumerate((1, 2, 3)):
             if environment.waiting[category] > 0:
                 return action
         return 0
 
-    def new_live_state(policy_name, scenario_name, episode_horizon, episode_seed):
+    def _safeicu_new_state(
+        policy_name, scenario_name, episode_horizon, episode_seed
+    ):
         environment = SafeICURLEnv(
             scenario=scenario_name,
             safety_enabled=True,
@@ -543,8 +555,10 @@ with tabs[3]:
 
         return {
             "config": (
-                policy_name, scenario_name,
-                int(episode_horizon), int(episode_seed)
+                policy_name,
+                scenario_name,
+                int(episode_horizon),
+                int(episode_seed),
             ),
             "env": environment,
             "model": model,
@@ -557,13 +571,14 @@ with tabs[3]:
             "seed": int(episode_seed),
         }
 
-    def advance_one_hour(state):
+    def _safeicu_advance(state):
         environment = state["env"]
+
         if state["done"]:
             return
 
         if state["model"] is None:
-            proposed = baseline_action(environment)
+            proposed = _safeicu_baseline_action(environment)
         else:
             action_value, _ = state["model"].predict(
                 state["obs"], deterministic=True
@@ -597,8 +612,12 @@ with tabs[3]:
             "Cumulative reward": float(info["total_reward"]),
             "Admissions total": int(info["admissions"]),
             "Critical waiting burden": int(info["critical_wait_total"]),
-            "Executed violations": int(info.get("executed_violations", 0)),
-            "Active durations": ", ".join(map(str, environment.active)),
+            "Executed violations": int(
+                info.get("executed_violations", 0)
+            ),
+            "Active durations": ", ".join(
+                map(str, environment.active)
+            ),
         })
 
         state["done"] = bool(
@@ -606,49 +625,99 @@ with tabs[3]:
             or environment.hour >= environment.horizon
         )
 
-    b1, b2, b3, b4, b5 = st.columns(5)
-    start_clicked = b1.button(
-        "↻ Start / reset", type="primary", key="live_start",
+    # Six controls: start, play, pause, one hour, six hours, finish.
+    bc1, bc2, bc3, bc4, bc5, bc6 = st.columns(6)
+
+    start_clicked = bc1.button(
+        "↻ Start / reset",
+        type="primary",
+        key="live_start",
         disabled=not (env_available and model_ready),
     )
-    step_clicked = b2.button(
-        "▶ Advance 1 hour", key="live_step",
+
+    play_clicked = bc2.button(
+        "▶ Play",
+        key="live_play",
         disabled=not (env_available and model_ready),
     )
-    batch_clicked = b3.button(
-        "⏩ Advance 6 hours", key="live_batch",
+
+    pause_clicked = bc3.button(
+        "⏸ Pause",
+        key="live_pause",
+    )
+
+    step_clicked = bc4.button(
+        "▶ 1 hour",
+        key="live_step",
         disabled=not (env_available and model_ready),
     )
-    finish_clicked = b4.button(
-        "⏭ Run to completion", key="live_finish",
+
+    batch_clicked = bc5.button(
+        "⏩ 6 hours",
+        key="live_batch",
         disabled=not (env_available and model_ready),
     )
-    if b5.button("⏹ Clear episode", key="live_clear"):
-        st.session_state.pop("safeicu_live_state", None)
-        st.session_state["safeicu_autoplay"] = False
-        st.rerun()
+
+    finish_clicked = bc6.button(
+        "⏭ Finish",
+        key="live_finish",
+        disabled=not (env_available and model_ready),
+    )
 
     if not env_available:
         st.error(
-            "Cannot import SafeICURLEnv. Ensure safeicu_env.py is "
-            "beside app.py."
+            "Cannot import SafeICURLEnv. Check that safeicu_env.py "
+            "is beside app.py."
         )
 
-    if live_policy in ("DQN", "PPO") and not model_ready:
+    if policy in ("DQN", "PPO") and not model_ready:
+        expected = (
+            "safeicu_dqn.zip" if policy == "DQN"
+            else "safeicu_ppo.zip"
+        )
         st.error(
-            f"{live_policy} is unavailable. Check the model ZIP and "
-            "stable-baselines3 installation."
+            f"{policy} is unavailable. Check models/{expected} "
+            "and the stable-baselines3 installation."
         )
 
+    # START OR RESET
     if start_clicked:
+        st.session_state["safeicu_autoplay"] = False
         try:
-            st.session_state["safeicu_live_state"] = new_live_state(
-                live_policy, live_scenario, int(horizon), int(seed)
+            st.session_state["safeicu_live_state"] = (
+                _safeicu_new_state(
+                    policy, scenario, int(horizon), int(seed)
+                )
+            )
+        except Exception as exc:
+            st.error(
+                "Could not start the simulation. Check model and "
+                "environment compatibility."
+            )
+            st.exception(exc)
+
+    # PLAY / RESUME
+    if play_clicked:
+        state = st.session_state.get("safeicu_live_state")
+
+        if state is None or state.get("config") != config:
+            st.warning(
+                "Click Start / reset first to create an episode "
+                "for the selected controls."
             )
             st.session_state["safeicu_autoplay"] = False
-        except Exception as exc:
-            st.error("Could not start the simulation.")
-            st.exception(exc)
+        elif state["done"]:
+            st.warning(
+                "This episode is complete. Click Start / reset "
+                "to begin a new episode."
+            )
+            st.session_state["safeicu_autoplay"] = False
+        else:
+            st.session_state["safeicu_autoplay"] = True
+
+    # PAUSE
+    if pause_clicked:
+        st.session_state["safeicu_autoplay"] = False
 
     state = st.session_state.get("safeicu_live_state")
 
@@ -658,72 +727,96 @@ with tabs[3]:
             "Click Start / reset to apply the new selections."
         )
 
+    # MANUAL ADVANCE STOPS AUTOPLAY FIRST
     if state and state.get("config") == config:
-        if step_clicked or batch_clicked or finish_clicked:
+        manual_advance = (
+            step_clicked or batch_clicked or finish_clicked
+        )
+
+        if manual_advance:
             st.session_state["safeicu_autoplay"] = False
+
             try:
-                count = (
-                    1 if step_clicked else
-                    6 if batch_clicked else
-                    int(state["horizon"])
-                )
-                for _ in range(count):
+                if step_clicked:
+                    n_steps = 1
+                elif batch_clicked:
+                    n_steps = 6
+                else:
+                    n_steps = int(state["horizon"])
+
+                for _ in range(n_steps):
                     if state["done"]:
                         break
-                    advance_one_hour(state)
+                    _safeicu_advance(state)
+
                 st.session_state["safeicu_live_state"] = state
-            except Exception as exc:
-                st.error("Simulation stopped due to an environment error.")
-                st.exception(exc)
 
-    # Autoplay controls: use streamlit-autorefresh if installed.
-    state = st.session_state.get("safeicu_live_state")
-    if state and state.get("config") == config:
-        play_col, pause_col = st.columns(2)
-
-        if play_col.button(
-            "▶ Play autoplay", key="live_play",
-            disabled=state["done"] or st_autorefresh is None,
-        ):
-            st.session_state["safeicu_autoplay"] = True
-            st.rerun()
-
-        if pause_col.button("⏸ Pause", key="live_pause"):
-            st.session_state["safeicu_autoplay"] = False
-            st.rerun()
-
-        if st_autorefresh is None:
-            st.caption(
-                "Autoplay requires streamlit-autorefresh in requirements.txt. "
-                "Manual step controls are still available."
-            )
-
-        if st.session_state.get("safeicu_autoplay") and not state["done"]:
-            st_autorefresh(interval=1200, limit=None, key="safeicu_auto_refresh")
-            try:
-                advance_one_hour(state)
-                st.session_state["safeicu_live_state"] = state
             except Exception as exc:
                 st.session_state["safeicu_autoplay"] = False
-                st.error("Autoplay stopped due to an error.")
+                st.error(
+                    "The simulation stopped due to an inference "
+                    "or environment error."
+                )
                 st.exception(exc)
 
+    # AUTOPLAY: REFRESH AND ADVANCE ONE SIMULATED HOUR
+    state = st.session_state.get("safeicu_live_state")
+
+    if (
+        st.session_state["safeicu_autoplay"]
+        and state
+        and state.get("config") == config
+        and not state["done"]
+    ):
+        if st_autorefresh is None:
+            st.session_state["safeicu_autoplay"] = False
+            st.error(
+                "Autoplay requires streamlit-autorefresh. "
+                "Add it to requirements.txt and redeploy."
+            )
+        else:
+            # Request another Streamlit rerun every 1.5 seconds.
+            st_autorefresh(
+                interval=1500,
+                limit=None,
+                key="safeicu_live_autorefresh",
+            )
+
+            try:
+                _safeicu_advance(state)
+                st.session_state["safeicu_live_state"] = state
+
+                if state["done"]:
+                    st.session_state["safeicu_autoplay"] = False
+
+            except Exception as exc:
+                st.session_state["safeicu_autoplay"] = False
+                st.error("Autoplay stopped because of a simulation error.")
+                st.exception(exc)
+
+    # LIVE ICU DISPLAY
     state = st.session_state.get("safeicu_live_state")
 
     if state and state.get("config") == config:
         env_live = state["env"]
         records = pd.DataFrame(state["records"])
+
         cap_beds, cap_monitors, cap_staff = (
             env_live.capacity[state["scenario"]]
         )
+
         occupied = len(env_live.active)
         hour = env_live.hour
-        done = state["done"]
-        status = "COMPLETE" if done else "LIVE EPISODE"
-        pill_class = "pill-green" if done else "pill-blue"
 
-        if done:
-            st.session_state["safeicu_autoplay"] = False
+        if state["done"]:
+            status = "COMPLETE"
+            pill_class = "pill-green"
+        elif st.session_state["safeicu_autoplay"]:
+            status = "PLAYING"
+            pill_class = "pill-green"
+        else:
+            status = "PAUSED"
+            pill_class = "pill-blue"
 
         st.markdown(
             f"""
@@ -737,8 +830,9 @@ with tabs[3]:
               <div style="text-align:right;">
                 <span class="pill {pill_class}">{status}</span>
                 <div style="color:#aabbd0;font-size:.76rem;margin-top:7px;">
-                    Hour {hour} / {state['horizon']} ·
-                    {state['scenario'].upper()} · {state['policy']}
+                    Hour {hour} / {state['horizon']}
+                    · {state['scenario'].upper()}
+                    · {state['policy']}
                 </div>
               </div>
             </div>
@@ -751,7 +845,9 @@ with tabs[3]:
         m2.metric("Beds occupied", f"{occupied}/{cap_beds}")
         m3.metric("Admissions", int(env_live.admissions))
         m4.metric("Cumulative reward", f"{env_live.total_reward:.1f}")
-        m5.metric("Shield interventions", int(env_live.interventions))
+        m5.metric(
+            "Shield interventions", int(env_live.interventions)
+        )
 
         st.progress(
             min(hour / max(state["horizon"], 1), 1.0),
@@ -760,7 +856,7 @@ with tabs[3]:
 
         st.markdown("#### ICU bed bay")
         st.caption(
-            "Each occupied card is a synthetic active care slot. "
+            "Each occupied card represents a synthetic active care slot. "
             "No real patient data or clinical vital signs are used."
         )
 
@@ -774,48 +870,63 @@ with tabs[3]:
                 )
                 card = f"""
                 <div class="bed-card occupied">
-                    <div class="bed-top">
-                        <span>BED {index+1:02d}</span>
-                        <span class="pill pill-green">OCCUPIED</span>
-                    </div>
-                    <div class="bed-icon">🛏️ 🧑</div>
-                    <div class="bed-status">Care slot active</div>
-                    <div class="bed-meta">Monitor assigned · {remaining} h remaining</div>
+                  <div class="bed-top">
+                    <span>BED {index+1:02d}</span>
+                    <span class="pill pill-green">OCCUPIED</span>
+                  </div>
+                  <div class="bed-icon">🛏️ 🧑</div>
+                  <div class="bed-status">Care slot active</div>
+                  <div class="bed-meta">
+                    Monitor assigned · {remaining} h remaining
+                  </div>
                 </div>
                 """
             else:
                 card = f"""
                 <div class="bed-card">
-                    <div class="bed-top">
-                        <span>BED {index+1:02d}</span>
-                        <span class="pill pill-blue">AVAILABLE</span>
-                    </div>
-                    <div class="bed-icon">🛏️</div>
-                    <div class="bed-status">Ready for allocation</div>
-                    <div class="bed-meta">Monitor available · Staff capacity permitting</div>
+                  <div class="bed-top">
+                    <span>BED {index+1:02d}</span>
+                    <span class="pill pill-blue">AVAILABLE</span>
+                  </div>
+                  <div class="bed-icon">🛏️</div>
+                  <div class="bed-status">Ready for allocation</div>
+                  <div class="bed-meta">
+                    Monitor available · Staff capacity permitting
+                  </div>
                 </div>
                 """
+
             with bed_columns[index % 5]:
                 st.markdown(card, unsafe_allow_html=True)
 
         st.markdown("#### Patient queues")
+
         q1, q2, q3 = st.columns(3)
+
         q1.markdown(
-            f'<div class="queue-card"><div class="queue-name">🔴 CRITICAL PRIORITY</div>'
+            f'<div class="queue-card">'
+            f'<div class="queue-name">🔴 CRITICAL PRIORITY</div>'
             f'<div class="queue-count">{env_live.waiting[0]}</div>'
-            f'<div class="queue-name">Synthetic patients waiting</div></div>',
+            f'<div class="queue-name">Synthetic patients waiting</div>'
+            f'</div>',
             unsafe_allow_html=True,
         )
+
         q2.markdown(
-            f'<div class="queue-card"><div class="queue-name">🟠 HIGH PRIORITY</div>'
+            f'<div class="queue-card">'
+            f'<div class="queue-name">🟠 HIGH PRIORITY</div>'
             f'<div class="queue-count">{env_live.waiting[1]}</div>'
-            f'<div class="queue-name">Synthetic patients waiting</div></div>',
+            f'<div class="queue-name">Synthetic patients waiting</div>'
+            f'</div>',
             unsafe_allow_html=True,
         )
+
         q3.markdown(
-            f'<div class="queue-card"><div class="queue-name">🔵 MODERATE PRIORITY</div>'
+            f'<div class="queue-card">'
+            f'<div class="queue-name">🔵 MODERATE PRIORITY</div>'
             f'<div class="queue-count">{env_live.waiting[2]}</div>'
-            f'<div class="queue-name">Synthetic patients waiting</div></div>',
+            f'<div class="queue-name">Synthetic patients waiting</div>'
+            f'</div>',
             unsafe_allow_html=True,
         )
 
@@ -830,15 +941,20 @@ with tabs[3]:
             with left:
                 st.markdown("#### Waiting queue trajectory")
                 fig, ax = plt.subplots(figsize=(7, 3.5))
+
                 for col in [
                     "Critical waiting",
                     "High-priority waiting",
                     "Moderate-priority waiting",
                 ]:
                     ax.plot(
-                        records["Hour"], records[col],
-                        marker="o", markersize=3, label=col,
+                        records["Hour"],
+                        records[col],
+                        marker="o",
+                        markersize=3,
+                        label=col,
                     )
+
                 ax.set_xlabel("Simulated hour")
                 ax.set_ylabel("Patients waiting")
                 ax.grid(alpha=.2)
@@ -850,15 +966,20 @@ with tabs[3]:
             with right:
                 st.markdown("#### Resource utilization")
                 fig, ax = plt.subplots(figsize=(7, 3.5))
+
                 for col, label in [
                     ("Bed utilization", "Beds"),
                     ("Monitor utilization", "Monitors"),
                     ("Staff utilization", "Staff"),
                 ]:
                     ax.plot(
-                        records["Hour"], records[col],
-                        marker="o", markersize=3, label=label,
+                        records["Hour"],
+                        records[col],
+                        marker="o",
+                        markersize=3,
+                        label=label,
                     )
+
                 ax.set_ylim(0, 1.05)
                 ax.set_xlabel("Simulated hour")
                 ax.set_ylabel("Utilization")
@@ -869,12 +990,14 @@ with tabs[3]:
                 plt.close(fig)
 
             latest = records.iloc[-1]
+
             action_names = {
                 0: "No admission",
                 1: "Admit critical",
                 2: "Admit high-priority",
                 3: "Admit moderate-priority",
             }
+
             proposed = action_names.get(
                 int(latest["Proposed action"]), "Unknown"
             )
@@ -884,11 +1007,9 @@ with tabs[3]:
 
             st.markdown("#### Latest agent decision")
             d1, d2, d3 = st.columns(3)
+
             d1.info(f"**Proposed action**\n\n{proposed}")
-            if bool(latest["Shield intervention"]):
-                d2.warning(f"**Executed action**\n\n{executed}")
-            else:
-                d2.info(f"**Executed action**\n\n{executed}")
+            d2.warning(f"**Executed action**\n\n{executed}")
             d3.metric(
                 "Shield intervened this hour",
                 "Yes" if bool(latest["Shield intervention"]) else "No",
@@ -900,16 +1021,18 @@ with tabs[3]:
                     "under the environment's critical-priority rule."
                 )
 
-            with st.expander("View full episode event log", expanded=False):
+            with st.expander("View full episode event log"):
                 log_view = records.copy()
-                log_view["Proposed action"] = log_view[
-                    "Proposed action"
-                ].map(action_names)
-                log_view["Executed action"] = log_view[
-                    "Executed action"
-                ].map(action_names)
+                log_view["Proposed action"] = (
+                    log_view["Proposed action"].map(action_names)
+                )
+                log_view["Executed action"] = (
+                    log_view["Executed action"].map(action_names)
+                )
                 st.dataframe(
-                    log_view, use_container_width=True, hide_index=True
+                    log_view,
+                    use_container_width=True,
+                    hide_index=True,
                 )
 
             st.download_button(
@@ -919,28 +1042,38 @@ with tabs[3]:
                 "text/csv",
             )
 
-        if done:
+        if state["done"]:
             st.success(
                 "Episode complete. Change the scenario or seed and "
                 "start a new episode to compare behaviour."
             )
+        elif st.session_state["safeicu_autoplay"]:
+            st.caption(
+                "Autoplay is running. Select Pause to stop the simulation."
+            )
+        else:
+            st.caption(
+                "Simulation is paused. Select Play to resume from the "
+                "current hour, or use the manual advance buttons."
+            )
+
     else:
         st.info(
-            "Click Start / reset, then advance one hour or six hours "
-            "to watch the ICU room update. You can also run the whole episode."
+            "Click Start / reset to create an episode. Then select Play "
+            "for automatic animation, or advance the simulation manually."
         )
 
 
-# --------------------------------------------------
-# TAB 5: AGENTIC SUPERVISOR
-# --------------------------------------------------
-
+# ============================================================
+# AGENTIC SUPERVISOR
+# ============================================================
 with tabs[4]:
     st.subheader("Agentic AI experiment supervisor")
     st.write(
-        "The notebook supervisor analyzed saved results and generated "
-        "a bounded follow-up experiment. This deployed dashboard displays "
-        "those saved outputs; it does not train agents on the server."
+        "The supervisor analyzed saved results and generated a bounded "
+        "follow-up experiment. This deployed dashboard displays saved "
+        "outputs; it does not execute the supervisor or train agents "
+        "on the server."
     )
 
     if agent_report is not None:
@@ -953,7 +1086,9 @@ with tabs[4]:
 
     if followup is not None:
         st.markdown("#### Follow-up experiment records")
-        st.dataframe(followup, use_container_width=True, hide_index=True)
+        st.dataframe(
+            followup, use_container_width=True, hide_index=True
+        )
         st.download_button(
             "⬇️ Download follow-up data",
             followup.to_csv(index=False),
@@ -962,32 +1097,33 @@ with tabs[4]:
         )
 
     if final_summary is not None:
-        st.markdown("#### Evaluation summary")
+        st.markdown("#### Improved evaluation summary")
         st.dataframe(
             final_summary, use_container_width=True, hide_index=True
         )
 
 
-# --------------------------------------------------
-# TAB 6: DATA & METHODOLOGY
-# --------------------------------------------------
-
+# ============================================================
+# DATA AND METHODOLOGY
+# ============================================================
 with tabs[5]:
     st.subheader("Data, assumptions & methodology")
 
     st.markdown("""
-**Environment:** Synthetic hourly ICU simulation with discrete priority
+**Environment:** synthetic hourly ICU simulation with discrete priority
 categories and constrained resources.
 
-**Policies:** Priority baseline, DQN, PPO, and shielded variants.
+**Policies:** priority baseline, DQN, PPO, and shielded variants where
+the saved data includes them.
 
-**Scenarios:** Normal demand, surge demand, and reduced resource capacity.
+**Scenarios:** normal demand, surge demand, and reduced resource capacity.
 
-**Live simulation:** Runs the selected saved DQN/PPO model or priority
+**Live simulation:** runs the selected saved DQN/PPO model or priority
 baseline in the synthetic environment when model files are available.
 
-**Limitations:** This simulator is not medically validated. Results describe
-only the code, reward function, and synthetic assumptions used in this project.
+**Limitations:** this simulator is not medically validated. Results
+describe only the code, reward function, and synthetic assumptions used
+in this project.
 """)
 
     st.markdown("#### Data files in repository")
@@ -1006,10 +1142,8 @@ only the code, reward function, and synthetic assumptions used in this project.
     ]
 
     for name in expected_files:
-        exists = (DATA_DIR / name).exists()
-        st.write(("✅ " if exists else "— ") + name)
-
-    st.markdown(f"**Evaluation data currently used:** {evaluation_source}")
+        marker = "✅ " if (DATA_DIR / name).exists() else "— "
+        st.write(marker + name)
 
     st.download_button(
         "⬇️ Download filtered data",
@@ -1018,23 +1152,6 @@ only the code, reward function, and synthetic assumptions used in this project.
         "text/csv",
     )
 
-    for filename, label in [
-        ("safeicu_final_evaluation.csv", "Download independent evaluation"),
-        ("safeicu_initial_comparison.csv", "Download initial comparison"),
-        ("safeicu_final_summary.csv", "Download final summary"),
-        ("safeicu_agentic_report.csv", "Download agentic report"),
-        ("safeicu_dqn_safety_tests.csv", "Download DQN safety tests"),
-        ("safeicu_ppo_safety_tests.csv", "Download PPO safety tests"),
-    ]:
-        path = DATA_DIR / filename
-        if path.exists():
-            st.download_button(
-                label,
-                data=path.read_bytes(),
-                file_name=filename,
-                mime="text/csv",
-                key=f"download_{filename}",
-            )
 
 st.divider()
 st.caption(
