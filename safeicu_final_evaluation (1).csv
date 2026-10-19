@@ -1,0 +1,76 @@
+Policy,Scenario,Seed,Reward,Admissions,Critical Waiting Burden,Shield Interventions,Resource Limit Check Passed,Shield Check Passed,Reported Violations,Episode Steps
+DQN,normal,101,55.5,19,4,0,True,,0,24
+DQN,normal,202,65.0,18,7,0,True,,0,24
+DQN,normal,303,55.0,17,3,0,True,,0,24
+DQN,normal,404,64.0,19,8,0,True,,0,24
+DQN,normal,505,56.0,20,5,0,True,,0,24
+DQN + Shield,normal,101,63.0,19,0,4,True,True,0,24
+DQN + Shield,normal,202,62.0,18,0,4,True,True,0,24
+DQN + Shield,normal,303,61.0,17,0,3,True,True,0,24
+DQN + Shield,normal,404,52.5,17,1,2,True,True,0,24
+DQN + Shield,normal,505,76.5,22,1,3,True,True,0,24
+PPO,normal,101,-4.0,6,1,0,True,,0,24
+PPO,normal,202,-13.5,4,0,0,True,,0,24
+PPO,normal,303,-56.5,4,0,0,True,,0,24
+PPO,normal,404,-25.0,5,1,0,True,,0,24
+PPO,normal,505,-57.5,9,9,0,True,,0,24
+PPO + Shield,normal,101,3.5,6,0,1,True,True,0,24
+PPO + Shield,normal,202,-13.5,4,0,0,True,True,0,24
+PPO + Shield,normal,303,-56.5,4,0,0,True,True,0,24
+PPO + Shield,normal,404,-25.0,5,1,0,True,True,0,24
+PPO + Shield,normal,505,-50.0,9,4,4,True,True,0,24
+Priority Baseline,normal,101,92.5,21,0,6,True,True,0,24
+Priority Baseline,normal,202,70.5,22,0,3,True,True,0,24
+Priority Baseline,normal,303,48.5,15,0,2,True,True,0,24
+Priority Baseline,normal,404,82.0,21,1,4,True,True,0,24
+Priority Baseline,normal,505,72.0,24,2,3,True,True,0,24
+DQN,surge,101,67.0,24,18,0,True,,0,24
+DQN,surge,202,86.0,24,16,0,True,,0,24
+DQN,surge,303,71.0,23,4,0,True,,0,24
+DQN,surge,404,104.5,24,18,0,True,,0,24
+DQN,surge,505,52.0,24,22,0,True,,0,24
+DQN + Shield,surge,101,95.5,24,3,8,True,True,0,24
+DQN + Shield,surge,202,122.5,24,3,7,True,True,0,24
+DQN + Shield,surge,303,86.5,23,0,4,True,True,0,24
+DQN + Shield,surge,404,125.5,23,3,9,True,True,0,24
+DQN + Shield,surge,505,89.5,24,1,9,True,True,0,24
+PPO,surge,101,6.5,19,21,0,True,,0,24
+PPO,surge,202,2.0,14,9,0,True,,0,24
+PPO,surge,303,-40.0,13,8,0,True,,0,24
+PPO,surge,404,-68.0,18,47,0,True,,0,24
+PPO,surge,505,-16.5,19,21,0,True,,0,24
+PPO + Shield,surge,101,38.0,19,4,7,True,True,0,24
+PPO + Shield,surge,202,11.0,14,3,4,True,True,0,24
+PPO + Shield,surge,303,-16.0,13,0,2,True,True,0,24
+PPO + Shield,surge,404,-14.0,18,19,12,True,True,0,24
+PPO + Shield,surge,505,24.0,19,6,9,True,True,0,24
+Priority Baseline,surge,101,95.5,24,3,7,True,True,0,24
+Priority Baseline,surge,202,122.5,24,3,7,True,True,0,24
+Priority Baseline,surge,303,93.5,24,0,5,True,True,0,24
+Priority Baseline,surge,404,125.0,24,6,7,True,True,0,24
+Priority Baseline,surge,505,89.5,24,1,9,True,True,0,24
+DQN,shortage,101,45.0,17,12,0,True,,0,24
+DQN,shortage,202,55.0,16,8,0,True,,0,24
+DQN,shortage,303,49.0,17,6,0,True,,0,24
+DQN,shortage,404,62.5,16,13,0,True,,0,24
+DQN,shortage,505,35.0,16,13,0,True,,0,24
+DQN + Shield,shortage,101,62.0,17,5,4,True,True,0,24
+DQN + Shield,shortage,202,81.5,17,1,5,True,True,0,24
+DQN + Shield,shortage,303,67.0,17,1,3,True,True,0,24
+DQN + Shield,shortage,404,84.0,16,4,6,True,True,0,24
+DQN + Shield,shortage,505,42.5,16,8,2,True,True,0,24
+PPO,shortage,101,-28.5,8,0,0,True,,0,24
+PPO,shortage,202,-29.0,9,6,0,True,,0,24
+PPO,shortage,303,-35.5,8,2,0,True,,0,24
+PPO,shortage,404,-2.0,10,1,0,True,,0,24
+PPO,shortage,505,-42.0,9,5,0,True,,0,24
+PPO + Shield,shortage,101,-28.5,8,0,0,True,True,0,24
+PPO + Shield,shortage,202,-18.5,9,3,1,True,True,0,24
+PPO + Shield,shortage,303,-28.0,8,1,1,True,True,0,24
+PPO + Shield,shortage,404,-2.0,10,1,0,True,True,0,24
+PPO + Shield,shortage,505,-36.0,9,1,4,True,True,0,24
+Priority Baseline,shortage,101,47.0,16,2,3,True,True,0,24
+Priority Baseline,shortage,202,39.5,18,0,1,True,True,0,24
+Priority Baseline,shortage,303,58.5,18,0,3,True,True,0,24
+Priority Baseline,shortage,404,67.0,18,1,4,True,True,0,24
+Priority Baseline,shortage,505,42.5,16,8,2,True,True,0,24
