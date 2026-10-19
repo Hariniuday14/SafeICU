@@ -4,6 +4,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
+try:
+    from stable_baselines3 import DQN, PPO
+except Exception:
+    DQN = PPO = None
+
+try:
+    from safeicu_env import SafeICURLEnv
+except Exception:
+    SafeICURLEnv = None
+
 st.set_page_config(
     page_title="SafeICU | Safety-Aware RL Lab",
     page_icon="🏥",
@@ -15,21 +25,35 @@ DATA_DIR = Path(__file__).parent
 
 st.markdown("""
 <style>
-.stApp { background: #0a1020; }
-[data-testid="stSidebar"] { background: #111a2d; }
-.block-container { max-width: 1500px; padding-top: 1.5rem; padding-bottom: 3rem; }
-.hero { padding: 1.5rem 1.7rem; border-radius: 18px;
-  background: linear-gradient(115deg,#14243b,#124149);
-  border: 1px solid #285d66; margin-bottom: 1rem; }
-.eyebrow { color: #79e5d4; font-size: .75rem; letter-spacing: .14em;
-  font-weight: 800; text-transform: uppercase; }
-.hero h1 { color: #f5f8ff; margin: .3rem 0; font-size: 2.5rem; }
-.hero p { color: #c4d4e8; margin: 0; }
-div[data-testid="stMetric"] { background:#121d31; border:1px solid #263750;
-  border-radius:14px; padding: .9rem 1rem; }
+.stApp { background: radial-gradient(circle at 80% 0%, #132b42 0, #0a1020 38%); color: #edf4ff; }
+[data-testid="stSidebar"] { background: #0e1728; border-right: 1px solid #24354b; }
+.block-container { max-width: 1580px; padding-top: 1.25rem; padding-bottom: 3rem; }
+.hero { padding: 1.55rem 1.8rem; border-radius: 20px; background: linear-gradient(115deg,#14243b,#124149); border: 1px solid #2b6570; margin-bottom: 1rem; box-shadow: 0 14px 40px rgba(0,0,0,.18); }
+.eyebrow { color: #79e5d4; font-size: .72rem; letter-spacing: .16em; font-weight: 800; text-transform: uppercase; }
+.hero h1 { color: #f5f8ff; margin: .25rem 0; font-size: 2.65rem; letter-spacing: -.04em; }
+.hero p { color: #c4d4e8; margin: 0; font-size: 1rem; }
+div[data-testid="stMetric"] { background: linear-gradient(145deg,#142138,#101a2b); border: 1px solid #2a3d57; border-radius: 15px; padding: .85rem 1rem; box-shadow: 0 5px 18px rgba(0,0,0,.12); }
 div[data-testid="stMetricLabel"] { color:#aabbd0; }
 div[data-testid="stMetricValue"] { color:#f5f8ff; }
-.note { color:#9cacc2; font-size:.86rem; }
+.note { color:#9cacc2; font-size:.82rem; letter-spacing:.04em; }
+.room-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; background:#111e31; border:1px solid #2a3d57; border-radius:14px; margin:8px 0 14px; }
+.room-label { font-weight:800; letter-spacing:.08em; font-size:.82rem; color:#b9cadf; }
+.pill { display:inline-block; border-radius:999px; padding:4px 9px; font-size:.72rem; font-weight:800; margin:2px; }
+.pill-green { background:#123d35; color:#8cf0cf; border:1px solid #286b5a; }
+.pill-blue { background:#142f4d; color:#9bd2ff; border:1px solid #315a80; }
+.bed-card { min-height:145px; border-radius:14px; padding:12px; margin:4px 0 10px; border:1px solid #30435a; background:linear-gradient(150deg,#17243a,#111b2b); }
+.bed-card.occupied { border-color:#28796f; background:linear-gradient(150deg,#123a3a,#142536); }
+.bed-top { display:flex; justify-content:space-between; align-items:center; color:#a9bbd0; font-size:.68rem; font-weight:800; letter-spacing:.07em; }
+.bed-icon { font-size:1.75rem; margin:8px 0 4px; }
+.bed-status { font-size:.8rem; font-weight:800; color:#e7f2ff; }
+.bed-meta { font-size:.72rem; color:#a8bad0; margin-top:4px; }
+.queue-card { border:1px solid #2b3e56; border-radius:14px; padding:14px; background:#111d30; }
+.queue-count { font-size:1.9rem; font-weight:800; color:#f5f8ff; }
+.queue-name { color:#b5c7dc; font-size:.78rem; }
+[data-testid="stProgressBar"] > div > div { background: linear-gradient(90deg,#21b6a8,#7ee7c4); }
+.stButton > button[kind="primary"] { border:0; background:linear-gradient(90deg,#0e9f91,#16b7a8); color:#061c24; font-weight:800; }
+.stButton > button { border-radius:10px; }
+hr { border-color:#27384e; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -64,7 +88,7 @@ else:
 st.sidebar.divider()
 st.sidebar.markdown("### About this demo")
 st.sidebar.caption("Synthetic educational simulation only. Not a clinical decision-support system.")
-st.sidebar.caption("The live simulator below uses a transparent rule-based demo policy. It does not load trained DQN/PPO weights.")
+st.sidebar.caption("The Live ICU tab can run saved DQN/PPO models when their files and matching environment are available.")
 
 st.markdown("""
 <div class="hero">
@@ -173,91 +197,211 @@ with tabs[2]:
         st.warning("Executed-violation counts are absent from the selected CSV. Do not infer zero violations from missing data.")
 
 with tabs[3]:
-    st.subheader("Interactive 24-hour ICU simulation")
-    st.markdown("This is a new synthetic demonstration episode. It animates the simulated resource and queue trajectory when you run it. **It uses an explicit priority-rule demo policy, not the trained DQN/PPO models.**")
-    c1, c2, c3 = st.columns(3)
-    sim_scenario = c1.selectbox("Simulation scenario", ["normal", "surge", "shortage"], key="sim_scenario")
-    sim_seed = c2.number_input("Random seed", min_value=1, max_value=99999, value=42, step=1)
-    horizon = c3.selectbox("Duration (hours)", [12, 24, 48], index=1)
-    run = st.button("▶ Run synthetic simulation", type="primary")
-    if run:
-        rng = np.random.default_rng(int(sim_seed))
-        beds, monitors, staff = ({"normal": (10, 8, 6), "surge": (10, 8, 6), "shortage": (5, 4, 3)})[sim_scenario]
-        arrival_rate = {"normal": 1.0, "surge": 2.2, "shortage": 1.5}[sim_scenario]
-        if sim_scenario == "shortage":
-            arrival_rate = 1.5
-        waiting = [0, 0, 0]  # critical, high, moderate
-        active = []
-        records = []
-        arrivals_total = 0
-        admissions_total = 0
-        violations = 0
-        for hour in range(horizon):
-            active = [r - 1 for r in active if r - 1 > 0]
-            arrivals = int(rng.poisson(arrival_rate))
-            cats = rng.choice(3, size=arrivals, p=[0.20, 0.35, 0.45]) if arrivals else []
-            for cat in cats:
-                waiting[int(cat)] += 1
-            arrivals_total += arrivals
-            occupied = len(active)
-            capacity_available = occupied < min(beds, monitors, staff)
-            admitted_now = 0
-            if capacity_available and sum(waiting) > 0:
-                # Transparent priority rule: critical > high > moderate.
-                category = next(i for i, count in enumerate(waiting) if count > 0)
-                waiting[category] -= 1
-                active.append(int(rng.integers(2, 7)))
-                admissions_total += 1
-                admitted_now = 1
-            occupied = len(active)
-            records.append({
-                "Hour": hour + 1,
-                "Arrivals": arrivals,
-                "Critical waiting": waiting[0],
-                "High waiting": waiting[1],
-                "Moderate waiting": waiting[2],
-                "Active care slots": occupied,
-                "Bed utilization": occupied / beds,
-                "Monitor utilization": occupied / monitors,
-                "Staff utilization": occupied / staff,
-                "Admissions this hour": admitted_now,
-                "Waiting burden": waiting[0]
-            })
-        sim_df = pd.DataFrame(records)
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total arrivals", arrivals_total)
-        m2.metric("Admissions", admissions_total)
-        m3.metric("End-of-run critical queue", int(sim_df["Critical waiting"].iloc[-1]))
-        m4.metric("Mean bed utilization", f"{sim_df['Bed utilization'].mean():.0%}")
-        st.markdown("#### Queue and resource trajectory")
-        fig, ax = plt.subplots(figsize=(10, 4))
-        for col in ["Critical waiting", "High waiting", "Moderate waiting"]:
-            ax.plot(sim_df["Hour"], sim_df[col], marker="o", markersize=3, label=col)
-        ax.set_xlabel("Simulated hour")
-        ax.set_ylabel("Patients waiting")
-        ax.legend()
-        ax.grid(alpha=.2)
-        fig.tight_layout()
-        st.pyplot(fig, use_container_width=True)
-        plt.close(fig)
-        fig, ax = plt.subplots(figsize=(10, 3.5))
-        ax.plot(sim_df["Hour"], sim_df["Bed utilization"], label="Beds")
-        ax.plot(sim_df["Hour"], sim_df["Monitor utilization"], label="Monitors")
-        ax.plot(sim_df["Hour"], sim_df["Staff utilization"], label="Staff")
-        ax.set_ylim(0, 1.05)
-        ax.set_xlabel("Simulated hour")
-        ax.set_ylabel("Utilization")
-        ax.legend()
-        ax.grid(alpha=.2)
-        fig.tight_layout()
-        st.pyplot(fig, use_container_width=True)
-        plt.close(fig)
-        st.markdown("#### Hour-by-hour simulation log")
-        st.dataframe(sim_df, use_container_width=True, hide_index=True)
-        st.download_button("⬇️ Download simulation log", sim_df.to_csv(index=False), "safeicu_live_demo_log.csv", "text/csv")
-        st.info("This is a live-generated synthetic episode using a rule-based priority policy. It is not inference from your trained DQN/PPO weights. To demonstrate the trained agents live, their saved model files and matching environment implementation must also be deployed.")
+    st.subheader("Live ICU Digital Twin")
+    st.markdown("A visual, step-by-step synthetic ICU. The selected policy acts on the same environment state displayed below. Educational prototype only; not for clinical use.")
+
+    model_dir = DATA_DIR / "models"
+    dqn_path = model_dir / "safeicu_dqn.zip"
+    ppo_path = model_dir / "safeicu_ppo.zip"
+    dqn_available = dqn_path.exists() and DQN is not None
+    ppo_available = ppo_path.exists() and PPO is not None
+    env_available = SafeICURLEnv is not None
+
+    a, b, c = st.columns(3)
+    a.metric("DQN checkpoint", "READY" if dqn_available else "NOT FOUND")
+    b.metric("PPO checkpoint", "READY" if ppo_available else "NOT FOUND")
+    c.metric("Environment", "READY" if env_available else "NOT FOUND")
+
+    c1, c2, c3, c4 = st.columns([1.2, 1.2, 1, 1])
+    scenario = c1.selectbox("Demand scenario", ["normal", "surge", "shortage"], key="live_scenario")
+    policy = c2.selectbox("Live policy", ["DQN", "PPO", "Priority baseline"], key="live_policy")
+    horizon = c3.selectbox("Episode length", [12, 24, 48], index=1, key="live_horizon")
+    seed = c4.number_input("Random seed", min_value=1, max_value=999999, value=42, step=1, key="live_seed")
+    config = (policy, scenario, int(horizon), int(seed))
+    model_ready = {"DQN": dqn_available, "PPO": ppo_available, "Priority baseline": True}[policy]
+
+    def _safeicu_baseline_action(environment):
+        # SafeICURLEnv actions: 0=wait, 1=critical, 2=high, 3=moderate.
+        for category, action in enumerate((1, 2, 3)):
+            if environment.waiting[category] > 0:
+                return action
+        return 0
+
+    def _safeicu_new_state(policy_name, scenario_name, episode_horizon, episode_seed):
+        environment = SafeICURLEnv(scenario=scenario_name, safety_enabled=True, horizon=int(episode_horizon))
+        observation, _ = environment.reset(seed=int(episode_seed))
+        model = None
+        if policy_name == "DQN":
+            model = DQN.load(str(dqn_path), device="cpu")
+        elif policy_name == "PPO":
+            model = PPO.load(str(ppo_path), device="cpu")
+        return {
+            "config": (policy_name, scenario_name, int(episode_horizon), int(episode_seed)),
+            "env": environment, "model": model, "obs": observation,
+            "records": [], "done": False, "policy": policy_name,
+            "scenario": scenario_name, "horizon": int(episode_horizon), "seed": int(episode_seed),
+        }
+
+    def _safeicu_advance(state):
+        environment = state["env"]
+        if state["done"]:
+            return
+        if state["model"] is None:
+            proposed = _safeicu_baseline_action(environment)
+        else:
+            action_value, _ = state["model"].predict(state["obs"], deterministic=True)
+            proposed = int(np.asarray(action_value).item())
+        observation, reward, terminated, truncated, info = environment.step(proposed)
+        state["obs"] = observation
+        used = len(environment.active)
+        cap_beds, cap_monitors, cap_staff = environment.capacity[state["scenario"]]
+        state["records"].append({
+            "Hour": int(environment.hour),
+            "Critical waiting": int(environment.waiting[0]),
+            "High-priority waiting": int(environment.waiting[1]),
+            "Moderate-priority waiting": int(environment.waiting[2]),
+            "Occupied beds": used,
+            "Available beds": max(cap_beds - used, 0),
+            "Bed utilization": used / cap_beds,
+            "Monitor utilization": used / cap_monitors,
+            "Staff utilization": used / cap_staff,
+            "Proposed action": int(info["proposed_action"]),
+            "Executed action": int(info["executed_action"]),
+            "Shield intervention": bool(info["shield_intervention"]),
+            "Reward this hour": float(reward),
+            "Cumulative reward": float(info["total_reward"]),
+            "Admissions total": int(info["admissions"]),
+            "Critical waiting burden": int(info["critical_wait_total"]),
+            "Executed violations": int(info.get("executed_violations", 0)),
+            "Active durations": ", ".join(map(str, environment.active)),
+        })
+        state["done"] = bool(terminated or truncated or environment.hour >= environment.horizon)
+
+    bc1, bc2, bc3, bc4 = st.columns([1, 1, 1, 1.5])
+    start_clicked = bc1.button("↻ Start / reset", type="primary", key="live_start", disabled=not (env_available and model_ready))
+    step_clicked = bc2.button("▶ Advance 1 hour", key="live_step", disabled=not (env_available and model_ready))
+    batch_clicked = bc3.button("⏩ Advance 6 hours", key="live_batch", disabled=not (env_available and model_ready))
+    finish_clicked = bc4.button("⏭ Run to completion", key="live_finish", disabled=not (env_available and model_ready))
+
+    if not env_available:
+        st.error("Cannot import SafeICURLEnv. Check that safeicu_env.py is beside app.py.")
+    if policy in ("DQN", "PPO") and not model_ready:
+        st.error(f"{policy} is unavailable. Check that models/{policy.lower() == 'dqn' and 'safeicu_dqn.zip' or 'safeicu_ppo.zip'} exists and stable-baselines3 imports correctly.")
+
+    if start_clicked:
+        try:
+            st.session_state["safeicu_live_state"] = _safeicu_new_state(policy, scenario, int(horizon), int(seed))
+        except Exception as exc:
+            st.error("Could not load the model or start the environment. Check deployment logs and model/environment compatibility.")
+            st.exception(exc)
+
+    state = st.session_state.get("safeicu_live_state")
+    if state and state.get("config") != config:
+        st.warning("Your controls differ from the current episode. Click Start / reset to apply the new selections.")
+    if state and state.get("config") == config and (step_clicked or batch_clicked or finish_clicked):
+        try:
+            n_steps = 1 if step_clicked else 6 if batch_clicked else int(state["horizon"])
+            for _ in range(n_steps):
+                if state["done"]:
+                    break
+                _safeicu_advance(state)
+            st.session_state["safeicu_live_state"] = state
+        except Exception as exc:
+            st.error("The simulation stopped due to an inference or environment error.")
+            st.exception(exc)
+
+    state = st.session_state.get("safeicu_live_state")
+    if state and state.get("config") == config:
+        env_live = state["env"]
+        records = pd.DataFrame(state["records"])
+        cap_beds, cap_monitors, cap_staff = env_live.capacity[state["scenario"]]
+        occupied = len(env_live.active)
+        hour = env_live.hour
+        status = "COMPLETE" if state["done"] else "LIVE EPISODE"
+        pill_class = "pill-green" if state["done"] else "pill-blue"
+        st.markdown(f'''<div class="room-head"><div><div class="room-label">SAFEICU · RESOURCE FLOOR</div><div style="font-size:1.2rem;font-weight:800;margin-top:5px;">Synthetic intensive care unit</div></div><div style="text-align:right;"><span class="pill {pill_class}">{status}</span><div style="color:#aabbd0;font-size:.76rem;margin-top:7px;">Hour {hour} / {state['horizon']} · {state['scenario'].upper()} · {state['policy']}</div></div></div>''', unsafe_allow_html=True)
+
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("Simulation hour", f"{hour}/{state['horizon']}")
+        m2.metric("Beds occupied", f"{occupied}/{cap_beds}")
+        m3.metric("Admissions", int(env_live.admissions))
+        m4.metric("Cumulative reward", f"{env_live.total_reward:.1f}")
+        m5.metric("Shield interventions", int(env_live.interventions))
+        st.progress(min(hour / max(state["horizon"], 1), 1.0), text=f"Episode progress · {hour} of {state['horizon']} hours")
+
+        st.markdown("#### ICU bed bay")
+        st.caption("Each occupied card represents a synthetic active care slot. No real patient data or clinical vital signs are used.")
+        durations = list(env_live.active)
+        bed_columns = st.columns(5)
+        for index in range(cap_beds):
+            if index < occupied:
+                remaining = durations[index] if index < len(durations) else "—"
+                card = f'''<div class="bed-card occupied"><div class="bed-top"><span>BED {index+1:02d}</span><span class="pill pill-green">OCCUPIED</span></div><div class="bed-icon">🛏️ 🧑</div><div class="bed-status">Care slot active</div><div class="bed-meta">Monitor assigned · {remaining} h remaining</div></div>'''
+            else:
+                card = f'''<div class="bed-card"><div class="bed-top"><span>BED {index+1:02d}</span><span class="pill pill-blue">AVAILABLE</span></div><div class="bed-icon">🛏️</div><div class="bed-status">Ready for allocation</div><div class="bed-meta">Monitor available · Staff capacity permitting</div></div>'''
+            with bed_columns[index % 5]:
+                st.markdown(card, unsafe_allow_html=True)
+
+        st.markdown("#### Patient queues")
+        q1, q2, q3 = st.columns(3)
+        q1.markdown(f'<div class="queue-card"><div class="queue-name">🔴 CRITICAL PRIORITY</div><div class="queue-count">{env_live.waiting[0]}</div><div class="queue-name">Synthetic patients waiting</div></div>', unsafe_allow_html=True)
+        q2.markdown(f'<div class="queue-card"><div class="queue-name">🟠 HIGH PRIORITY</div><div class="queue-count">{env_live.waiting[1]}</div><div class="queue-name">Synthetic patients waiting</div></div>', unsafe_allow_html=True)
+        q3.markdown(f'<div class="queue-card"><div class="queue-name">🔵 MODERATE PRIORITY</div><div class="queue-count">{env_live.waiting[2]}</div><div class="queue-name">Synthetic patients waiting</div></div>', unsafe_allow_html=True)
+
+        u1, u2, u3 = st.columns(3)
+        u1.metric("Bed utilization", f"{occupied/cap_beds:.0%}")
+        u2.metric("Monitor utilization", f"{occupied/cap_monitors:.0%}")
+        u3.metric("Staff utilization", f"{occupied/cap_staff:.0%}")
+
+        if not records.empty:
+            left, right = st.columns(2)
+            with left:
+                st.markdown("#### Waiting queue trajectory")
+                fig, ax = plt.subplots(figsize=(7, 3.5))
+                for col in ["Critical waiting", "High-priority waiting", "Moderate-priority waiting"]:
+                    ax.plot(records["Hour"], records[col], marker="o", markersize=3, label=col)
+                ax.set_xlabel("Simulated hour")
+                ax.set_ylabel("Patients waiting")
+                ax.grid(alpha=.2)
+                ax.legend(fontsize=8)
+                fig.tight_layout()
+                st.pyplot(fig, use_container_width=True)
+                plt.close(fig)
+            with right:
+                st.markdown("#### Resource utilization")
+                fig, ax = plt.subplots(figsize=(7, 3.5))
+                for col, label in [("Bed utilization", "Beds"), ("Monitor utilization", "Monitors"), ("Staff utilization", "Staff")]:
+                    ax.plot(records["Hour"], records[col], marker="o", markersize=3, label=label)
+                ax.set_ylim(0, 1.05)
+                ax.set_xlabel("Simulated hour")
+                ax.set_ylabel("Utilization")
+                ax.grid(alpha=.2)
+                ax.legend(fontsize=8)
+                fig.tight_layout()
+                st.pyplot(fig, use_container_width=True)
+                plt.close(fig)
+
+            latest = records.iloc[-1]
+            action_names = {0: "No admission", 1: "Admit critical", 2: "Admit high-priority", 3: "Admit moderate-priority"}
+            proposed = action_names.get(int(latest["Proposed action"]), "Unknown")
+            executed = action_names.get(int(latest["Executed action"]), "Unknown")
+            st.markdown("#### Latest agent decision")
+            d1, d2, d3 = st.columns(3)
+            d1.info(f"**Proposed action**\n\n{proposed}")
+            d2.warning(f"**Executed action**\n\n{executed}" if bool(latest["Shield intervention"]) else f"**Executed action**\n\n{executed}")
+            d3.metric("Shield intervened this hour", "Yes" if bool(latest["Shield intervention"]) else "No")
+            if bool(latest["Shield intervention"]):
+                st.warning("The safety shield modified the proposed action under the environment's critical-priority rule.")
+            with st.expander("View full episode event log", expanded=False):
+                log_view = records.copy()
+                log_view["Proposed action"] = log_view["Proposed action"].map(action_names)
+                log_view["Executed action"] = log_view["Executed action"].map(action_names)
+                st.dataframe(log_view, use_container_width=True, hide_index=True)
+            st.download_button("⬇ Download episode log", records.to_csv(index=False), "safeicu_live_episode.csv", "text/csv")
+        if state["done"]:
+            st.success("Episode complete. Change the scenario or seed and start a new episode to compare behaviour.")
     else:
-        st.info("Choose a scenario and click **Run synthetic simulation** to generate a new episode. The result is generated on demand, not read from the saved evaluation CSV.")
+        st.info("Click Start / reset, then advance one hour or six hours to watch the ICU room update. You can also run the whole episode.")
 
 with tabs[4]:
     st.subheader("Agentic AI experiment supervisor")
@@ -284,7 +428,7 @@ with tabs[5]:
 
 **Scenarios:** normal demand, surge demand, and reduced resource capacity.
 
-**Live simulation tab:** generates a new synthetic episode using a transparent priority rule. It is deliberately not labelled as trained-agent inference.
+**Live simulation tab:** runs the selected saved DQN/PPO model or priority baseline in the synthetic environment when model files are available. Visual bed cards represent resource occupancy only; they are not clinical data.
 
 **Limitations:** this simulator is not medically validated. Results describe only the code, reward function, and synthetic assumptions used in this project.
 """)
@@ -293,7 +437,7 @@ with tabs[5]:
         "safeicu_initial_comparison.csv", "safeicu_final_evaluation.csv",
         "safeicu_final_summary.csv", "safeicu_agentic_followup.csv",
         "safeicu_agentic_report.csv", "safeicu_dqn_safety_tests.csv",
-        "safeicu_ppo_safety_tests.csv"
+        "safeicu_ppo_safety_tests.csv", "safeicu_env.py", "models/safeicu_dqn.zip", "models/safeicu_ppo.zip"
     ]
     for name in expected_files:
         st.write(("✅ " if (DATA_DIR / name).exists() else "— ") + name)
