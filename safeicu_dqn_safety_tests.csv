@@ -1,0 +1,4 @@
+scenario,episodes_steps,shield_interventions,resource_limit_checks_passed,shield_checks_passed,issues
+normal,24,4,True,True,None
+surge,24,10,True,True,None
+shortage,24,5,True,True,None

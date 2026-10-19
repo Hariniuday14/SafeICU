@@ -1,0 +1,76 @@
+Policy,Scenario,Seed,Reward,Admissions,Critical Waiting Burden,Shield Interventions
+Priority Baseline,normal,11,49.5,13,5,0
+DQN,normal,11,70.5,17,10,0
+DQN + Shield,normal,11,103.5,18,0,8
+PPO,normal,11,11.5,8,1,0
+PPO + Shield,normal,11,11.5,8,1,0
+Priority Baseline,normal,22,71.0,21,5,0
+DQN,normal,22,60.0,19,3,0
+DQN + Shield,normal,22,65.0,19,1,2
+PPO,normal,22,-8.0,6,1,0
+PPO + Shield,normal,22,-8.0,6,1,0
+Priority Baseline,normal,33,59.5,19,3,0
+DQN,normal,33,31.5,15,2,0
+DQN + Shield,normal,33,47.5,16,0,2
+PPO,normal,33,-33.5,4,0,0
+PPO + Shield,normal,33,-33.5,4,0,0
+Priority Baseline,normal,44,48.5,17,4,0
+DQN,normal,44,55.0,18,4,0
+DQN + Shield,normal,44,61.0,18,0,4
+PPO,normal,44,35.5,9,1,0
+PPO + Shield,normal,44,35.5,9,1,0
+Priority Baseline,normal,55,65.5,21,3,0
+DQN,normal,55,67.0,19,4,0
+DQN + Shield,normal,55,73.5,19,0,4
+PPO,normal,55,-38.0,6,1,0
+PPO + Shield,normal,55,-38.0,6,1,0
+Priority Baseline,surge,11,112.0,23,18,0
+DQN,surge,11,111.0,23,18,0
+DQN + Shield,surge,11,107.0,24,10,15
+PPO,surge,11,70.0,20,17,0
+PPO + Shield,surge,11,95.5,20,8,6
+Priority Baseline,surge,22,46.0,24,17,0
+DQN,surge,22,-5.0,24,43,0
+DQN + Shield,surge,22,71.5,24,4,12
+PPO,surge,22,43.0,24,19,0
+PPO + Shield,surge,22,71.5,24,4,8
+Priority Baseline,surge,33,94.0,24,10,0
+DQN,surge,33,82.0,24,14,0
+DQN + Shield,surge,33,110.5,24,0,10
+PPO,surge,33,-17.0,11,2,0
+PPO + Shield,surge,33,-15.0,11,0,3
+Priority Baseline,surge,44,63.0,24,16,0
+DQN,surge,44,37.5,24,29,0
+DQN + Shield,surge,44,79.5,24,5,10
+PPO,surge,44,-2.5,20,16,0
+PPO + Shield,surge,44,24.5,20,6,5
+Priority Baseline,surge,55,91.5,24,10,0
+DQN,surge,55,103.5,23,11,0
+DQN + Shield,surge,55,117.5,23,2,7
+PPO,surge,55,0.5,12,2,0
+PPO + Shield,surge,55,2.0,12,1,1
+Priority Baseline,shortage,11,82.0,19,9,0
+DQN,shortage,11,75.0,17,8,0
+DQN + Shield,shortage,11,93.5,18,1,6
+PPO,shortage,11,32.0,8,0,0
+PPO + Shield,shortage,11,32.0,8,0,0
+Priority Baseline,shortage,22,31.0,16,15,0
+DQN,shortage,22,14.5,16,22,0
+DQN + Shield,shortage,22,46.0,16,5,6
+PPO,shortage,22,2.0,13,8,0
+PPO + Shield,shortage,22,14.0,13,4,1
+Priority Baseline,shortage,33,32.0,18,10,0
+DQN,shortage,33,7.5,15,15,0
+DQN + Shield,shortage,33,27.0,15,6,3
+PPO,shortage,33,-43.5,11,14,0
+PPO + Shield,shortage,33,-22.5,11,4,6
+Priority Baseline,shortage,44,32.5,16,1,0
+DQN,shortage,44,39.5,14,5,0
+DQN + Shield,shortage,44,56.0,16,1,2
+PPO,shortage,44,-36.5,5,1,0
+PPO + Shield,shortage,44,-36.5,5,1,0
+Priority Baseline,shortage,55,17.0,17,24,0
+DQN,shortage,55,14.0,17,26,0
+DQN + Shield,shortage,55,33.5,17,13,2
+PPO,shortage,55,-34.5,10,0,0
+PPO + Shield,shortage,55,-34.5,10,0,0
