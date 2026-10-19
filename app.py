@@ -215,8 +215,13 @@ with tab_policies:
             else numeric_cols[0]
         )
         metric = st.selectbox("Metric to compare", numeric_cols, index=numeric_cols.index(default_metric))
-        summary = filtered.groupby("Policy", as_index=False)[metric].agg(["mean", "std"]).reset_index()
-        summary.columns = ["Policy", "Mean", "StdDev"]
+        # Aggregate with named outputs so the resulting schema is stable
+        # across supported pandas versions.
+        summary = (
+            filtered.groupby("Policy")[metric]
+            .agg(Mean="mean", StdDev="std")
+            .reset_index()
+        )
         st.dataframe(summary.round(3), use_container_width=True, hide_index=True)
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.bar(summary["Policy"], summary["Mean"])
